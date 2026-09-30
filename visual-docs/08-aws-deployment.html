@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Deployment — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── AWS Architecture Diagram ── */
+    .aws-arch {
+      display: grid; grid-template-columns: 1fr; gap: 12px;
+      max-width: 900px; margin: var(--space-xl) auto;
+    }
+    .aws-row { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+    .aws-box {
+      background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px;
+      padding: 14px 18px; text-align: center; min-width: 140px;
+      transition: all 0.3s; cursor: default;
+      opacity: 0; animation: fadeInUp 0.5s var(--ease-out) forwards;
+    }
+    .aws-box:hover { border-color: var(--brand-400); box-shadow: var(--shadow-glow); transform: translateY(-2px); }
+    .aws-box .ab-icon { font-size: 1.6rem; }
+    .aws-box .ab-name { font-weight: 700; font-size: 0.85rem; margin-top: 4px; }
+    .aws-box .ab-svc { font-size: 0.7rem; color: var(--brand-500); font-weight: 600; }
+    .aws-box .ab-detail { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+    .aws-divider {
+      text-align: center; font-size: 0.75rem; color: var(--text-muted);
+      padding: 4px 0; letter-spacing: 0.1em;
+    }
+    .aws-arrow {
+      text-align: center; font-size: 1.2rem; color: var(--brand-400);
+      animation: arrowBounce 2s ease infinite; padding: 2px 0;
+    }
+
+    /* ── Cost Table ── */
+    .cost-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: var(--space-md); }
+    .cost-table th {
+      text-align: left; padding: 10px 14px; background: var(--bg-secondary);
+      font-weight: 600; font-size: 0.78rem; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 2px solid var(--border);
+    }
+    .cost-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .cost-table tr:last-child td { border-bottom: none; font-weight: 700; }
+    .cost-table .cost-val { font-family: var(--font-mono); text-align: right; }
+    .cost-table .cost-free { color: var(--green); }
+
+    /* ── Deploy Steps ── */
+    .deploy-step {
+      display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border);
+      opacity: 0; animation: fadeInUp 0.4s var(--ease-out) forwards;
+    }
+    .deploy-step:last-child { border-bottom: none; }
+    .ds-num {
+      width: 36px; height: 36px; border-radius: 10px; background: var(--brand-500); color: white;
+      display: flex; align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.85rem; flex-shrink: 0;
+    }
+    .ds-content { flex: 1; }
+    .ds-title { font-weight: 700; margin-bottom: 4px; }
+    .ds-detail { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+    .ds-cmd {
+      background: #1a1b26; color: #c0caf5; border-radius: 8px; padding: 8px 12px;
+      font-family: var(--font-mono); font-size: 0.75rem; margin-top: 8px; overflow-x: auto;
+    }
+
+    /* ── Environment Comparison ── */
+    .env-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: var(--space-xl) 0; }
+    .env-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px; opacity: 0; animation: scaleIn 0.4s var(--ease-spring) forwards;
+    }
+    .env-card h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .env-item { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.8rem; }
+    .env-item .ei-label { color: var(--text-muted); }
+    .env-item .ei-val { font-weight: 600; font-size: 0.78rem; }
+    @media (max-width: 768px) { .env-grid { grid-template-columns: 1fr; } }
+
+    .sd1{animation-delay:.1s}.sd2{animation-delay:.2s}.sd3{animation-delay:.3s}.sd4{animation-delay:.4s}
+    .sd5{animation-delay:.5s}.sd6{animation-delay:.6s}.sd7{animation-delay:.7s}.sd8{animation-delay:.8s}
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links"><a href="07-cicd-pipeline.html">← CI/CD</a><a href="09-ai-deep-dive.html">Next: AI →</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">08 / 10 — AWS</div>
+      <h1 class="fade-in delay-1">☁️ AWS <span class="gradient-text">Deployment</span></h1>
+      <p class="fade-in delay-2">Production architecture: ECS Fargate, RDS PostgreSQL, ElastiCache Redis, S3, CloudFront, Lambda — all in a VPC with private subnets. Same code, different infrastructure.</p>
+    </section>
+
+    <!-- ══════════ AWS ARCHITECTURE ══════════ -->
+    <section class="section">
+      <h2 class="section-title fade-in delay-3">Production Architecture</h2>
+
+      <div class="aws-arch">
+        <!-- Internet -->
+        <div class="aws-row">
+          <div class="aws-box sd1" style="border-color:var(--cyan);min-width:200px;">
+            <div class="ab-icon">🌍</div><div class="ab-name">Internet / Users</div>
+            <div class="ab-detail">Browser → HTTPS</div>
+          </div>
+        </div>
+        <div class="aws-arrow sd2">▼</div>
+
+        <!-- CloudFront -->
+        <div class="aws-row">
+          <div class="aws-box sd2" style="border-color:var(--orange);">
+            <div class="ab-icon">🌐</div><div class="ab-name">CloudFront</div>
+            <div class="ab-svc">CDN</div>
+            <div class="ab-detail">Static assets + cache</div>
+          </div>
+        </div>
+        <div class="aws-arrow sd3">▼ /api/* → ALB &nbsp;&nbsp; /* → S3</div>
+
+        <!-- ALB + S3 -->
+        <div class="aws-row">
+          <div class="aws-box sd3" style="border-color:var(--brand-500);">
+            <div class="ab-icon">⚖️</div><div class="ab-name">ALB</div>
+            <div class="ab-svc">Load Balancer</div>
+            <div class="ab-detail">Health checks + routing</div>
+          </div>
+          <div class="aws-box sd3" style="border-color:var(--green);">
+            <div class="ab-icon">📦</div><div class="ab-name">S3 Bucket</div>
+            <div class="ab-svc">Static Hosting</div>
+            <div class="ab-detail">React build (index.html, JS, CSS)</div>
+          </div>
+        </div>
+        <div class="aws-arrow sd4">▼ round-robin</div>
+
+        <!-- ECS -->
+        <div class="aws-row">
+          <div class="aws-box sd4" style="border-color:var(--brand-600);min-width:300px;">
+            <div class="ab-icon">🚀</div><div class="ab-name">ECS Fargate (2-10 tasks)</div>
+            <div class="ab-svc">Container Service — Auto-Scaling</div>
+            <div class="ab-detail">FastAPI + gunicorn -w 4 | 512 CPU, 1024 MB</div>
+          </div>
+          <div class="aws-box sd4" style="border-color:var(--orange);">
+            <div class="ab-icon">⏳</div><div class="ab-name">ECS (Celery)</div>
+            <div class="ab-svc">Background Workers</div>
+            <div class="ab-detail">2 worker tasks</div>
+          </div>
+        </div>
+
+        <div class="aws-divider sd5">──── Private Subnet (VPC) ────</div>
+
+        <!-- Data Stores -->
+        <div class="aws-row">
+          <div class="aws-box sd5" style="border-color:var(--purple);">
+            <div class="ab-icon">🐘</div><div class="ab-name">RDS PostgreSQL</div>
+            <div class="ab-svc">db.t3.micro + pgvector</div>
+            <div class="ab-detail">Multi-AZ, automated backups</div>
+          </div>
+          <div class="aws-box sd6" style="border-color:var(--red);">
+            <div class="ab-icon">🔴</div><div class="ab-name">ElastiCache</div>
+            <div class="ab-svc">Redis cache.t3.micro</div>
+            <div class="ab-detail">Cache + rate limit + broker</div>
+          </div>
+          <div class="aws-box sd6" style="border-color:var(--green);">
+            <div class="ab-icon">📦</div><div class="ab-name">S3</div>
+            <div class="ab-svc">Object Storage</div>
+            <div class="ab-detail">Exports + documents</div>
+          </div>
+        </div>
+
+        <div class="aws-divider sd7">──── Serverless Layer ────</div>
+
+        <!-- Lambda -->
+        <div class="aws-row">
+          <div class="aws-box sd7" style="border-color:var(--orange);">
+            <div class="ab-icon">⚡</div><div class="ab-name">6 Lambda Functions</div>
+            <div class="ab-svc">SAM Deployment</div>
+            <div class="ab-detail">EventBridge + SQS + S3 triggers</div>
+          </div>
+          <div class="aws-box sd7" style="border-color:var(--pink);">
+            <div class="ab-icon">📧</div><div class="ab-name">SES</div>
+            <div class="ab-svc">Email Service</div>
+            <div class="ab-detail">Reminders, reports, alerts</div>
+          </div>
+          <div class="aws-box sd8" style="border-color:var(--cyan);">
+            <div class="ab-icon">📊</div><div class="ab-name">CloudWatch</div>
+            <div class="ab-svc">Monitoring</div>
+            <div class="ab-detail">Logs + metrics + alarms</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ DEPLOY STEPS ══════════ -->
+    <section class="section">
+      <h2 class="section-title">Deploy Steps</h2>
+      <div style="max-width:700px;margin:0 auto;">
+        <div class="deploy-step sd1">
+          <div class="ds-num">1</div>
+          <div class="ds-content">
+            <div class="ds-title">Build & Push Docker Image</div>
+            <div class="ds-detail">Build the production stage of the Dockerfile (150MB), tag with git SHA, push to ECR.</div>
+            <div class="ds-cmd">docker build -t health-tracker-backend ./backend<br>docker tag ... &lt;account-id&gt;.dkr.ecr.us-east-1.amazonaws.com/health-tracker:latest<br>docker push ...</div>
+          </div>
+        </div>
+        <div class="deploy-step sd2">
+          <div class="ds-num">2</div>
+          <div class="ds-content">
+            <div class="ds-title">Update ECS Task Definition</div>
+            <div class="ds-detail">Point the task definition to the new image tag. Secrets come from AWS Systems Manager Parameter Store (not env vars).</div>
+            <div class="ds-cmd">aws ecs register-task-definition --family health-tracker-backend --container-definitions '[{"image":"...latest",...}]'</div>
+          </div>
+        </div>
+        <div class="deploy-step sd3">
+          <div class="ds-num">3</div>
+          <div class="ds-content">
+            <div class="ds-title">Rolling Update (Zero Downtime)</div>
+            <div class="ds-detail">ECS starts new tasks → health check passes → old tasks drain connections → old tasks stop. Users never see downtime.</div>
+            <div class="ds-cmd">aws ecs update-service --cluster health-tracker --service backend --task-definition health-tracker-backend:latest</div>
+          </div>
+        </div>
+        <div class="deploy-step sd4">
+          <div class="ds-num">4</div>
+          <div class="ds-content">
+            <div class="ds-title">Deploy Frontend to S3 + CloudFront</div>
+            <div class="ds-detail">Build React app with production API URL, upload to S3, invalidate CloudFront cache.</div>
+            <div class="ds-cmd">VITE_API_URL=https://api.healthtracker.app npm run build<br>aws s3 sync dist/ s3://health-tracker-frontend --delete<br>aws cloudfront create-invalidation --distribution-id &lt;id&gt; --paths "/*"</div>
+          </div>
+        </div>
+        <div class="deploy-step sd5">
+          <div class="ds-num">5</div>
+          <div class="ds-content">
+            <div class="ds-title">Deploy Lambda Functions</div>
+            <div class="ds-detail">SAM packages all 6 functions + shared/, creates/updates CloudFormation stack with SQS queues, S3 bucket, EventBridge rules.</div>
+            <div class="ds-cmd">cd lambda_functions<br>sam build && sam deploy</div>
+          </div>
+        </div>
+        <div class="deploy-step sd6">
+          <div class="ds-num">6</div>
+          <div class="ds-content">
+            <div class="ds-title">Run Migrations</div>
+            <div class="ds-detail">ECS exec into a running container, run Alembic migrations against the production RDS database.</div>
+            <div class="ds-cmd">aws ecs execute-command --cluster health-tracker --task &lt;task-id&gt; --command "alembic upgrade head"</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ COST ══════════ -->
+    <section class="section">
+      <h2 class="section-title">Monthly Cost Estimate</h2>
+      <div style="max-width:600px;margin:0 auto;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:var(--space-lg);overflow-x:auto;">
+        <table class="cost-table">
+          <thead><tr><th>Service</th><th>Tier</th><th style="text-align:right">Cost</th></tr></thead>
+          <tbody>
+            <tr><td>ECS Fargate (2 tasks)</td><td>0.5 vCPU, 1 GB each</td><td class="cost-val">~$30</td></tr>
+            <tr><td>RDS PostgreSQL</td><td>db.t3.micro, 20 GB</td><td class="cost-val">~$15</td></tr>
+            <tr><td>ElastiCache Redis</td><td>cache.t3.micro</td><td class="cost-val">~$12</td></tr>
+            <tr><td>ALB</td><td>Application LB</td><td class="cost-val">~$16</td></tr>
+            <tr><td>CloudFront</td><td>1 TB transfer</td><td class="cost-val">~$1</td></tr>
+            <tr><td>S3</td><td>5 GB storage</td><td class="cost-val">~$1</td></tr>
+            <tr><td>Lambda</td><td>~600 invocations</td><td class="cost-val cost-free">$0</td></tr>
+            <tr><td>SES</td><td>~1K emails</td><td class="cost-val">~$0.10</td></tr>
+            <tr><td>CloudWatch</td><td>Logs + metrics</td><td class="cost-val">~$2</td></tr>
+            <tr><td>Route 53</td><td>1 hosted zone</td><td class="cost-val">~$0.50</td></tr>
+            <tr style="background:var(--bg-secondary);"><td><strong>Total</strong></td><td></td><td class="cost-val" style="font-size:1.1rem;color:var(--brand-600);">~$78/month</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════ 3 ENVIRONMENTS ══════════ -->
+    <section class="section">
+      <h2 class="section-title">Same Code, 3 Environments</h2>
+      <p style="text-align:center;color:var(--text-secondary);margin-bottom:var(--space-lg);">The Strategy pattern + env vars mean zero code changes between environments.</p>
+      <div class="env-grid">
+        <div class="env-card sd1" style="border-top:4px solid var(--green);">
+          <h3>💻 Local</h3>
+          <div class="env-item"><span class="ei-label">Backend</span><span class="ei-val">Docker + uvicorn</span></div>
+          <div class="env-item"><span class="ei-label">Database</span><span class="ei-val">Docker PostgreSQL</span></div>
+          <div class="env-item"><span class="ei-label">LLM</span><span class="ei-val">Ollama (free)</span></div>
+          <div class="env-item"><span class="ei-label">Email</span><span class="ei-val">Console (logs)</span></div>
+          <div class="env-item"><span class="ei-label">Storage</span><span class="ei-val">MinIO</span></div>
+          <div class="env-item"><span class="ei-label">Cost</span><span class="ei-val" style="color:var(--green);">$0</span></div>
+        </div>
+        <div class="env-card sd2" style="border-top:4px solid var(--orange);">
+          <h3>🔶 Staging</h3>
+          <div class="env-item"><span class="ei-label">Backend</span><span class="ei-val">Railway</span></div>
+          <div class="env-item"><span class="ei-label">Database</span><span class="ei-val">Neon (free)</span></div>
+          <div class="env-item"><span class="ei-label">LLM</span><span class="ei-val">Groq (free)</span></div>
+          <div class="env-item"><span class="ei-label">Email</span><span class="ei-val">Resend (free)</span></div>
+          <div class="env-item"><span class="ei-label">Storage</span><span class="ei-val">Cloudflare R2</span></div>
+          <div class="env-item"><span class="ei-label">Cost</span><span class="ei-val" style="color:var(--green);">$0</span></div>
+        </div>
+        <div class="env-card sd3" style="border-top:4px solid var(--brand-500);">
+          <h3>🔵 Production</h3>
+          <div class="env-item"><span class="ei-label">Backend</span><span class="ei-val">ECS Fargate</span></div>
+          <div class="env-item"><span class="ei-label">Database</span><span class="ei-val">RDS PostgreSQL</span></div>
+          <div class="env-item"><span class="ei-label">LLM</span><span class="ei-val">OpenAI</span></div>
+          <div class="env-item"><span class="ei-label">Email</span><span class="ei-val">AWS SES</span></div>
+          <div class="env-item"><span class="ei-label">Storage</span><span class="ei-val">AWS S3</span></div>
+          <div class="env-item"><span class="ei-label">Cost</span><span class="ei-val" style="color:var(--brand-500);">~$78/mo</span></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p><a href="07-cicd-pipeline.html" style="color:var(--brand-500);text-decoration:none;">← CI/CD</a> · AWS Deployment · <a href="09-ai-deep-dive.html" style="color:var(--brand-500);text-decoration:none;">AI Deep Dive →</a></p>
+    </footer>
+  </div>
+</body>
+</html>

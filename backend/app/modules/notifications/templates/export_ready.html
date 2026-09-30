@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+    <div style="text-align: center; padding: 20px 0;">
+        <h1 style="color: #3B82F6; margin: 0;">🏥 Health Tracker</h1>
+    </div>
+
+    <div style="background: #F0FDF4; border-radius: 12px; padding: 24px; margin: 20px 0;">
+        <h2 style="margin-top: 0;">Your export is ready! 📁</h2>
+        <p>Hi {{ name }}, your habit data export is ready to download.</p>
+        <p><strong>Format:</strong> {{ file_format }}<br>
+           <strong>Period:</strong> {{ start_date }} to {{ end_date }}</p>
+
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{{ download_url }}"
+               style="background: #10B981; color: white; padding: 12px 32px;
+                      border-radius: 8px; text-decoration: none; font-weight: 600;">
+                Download Export →
+            </a>
+        </div>
+
+        <p style="color: #666; font-size: 13px;">This link expires in 24 hours.</p>
+    </div>
+</body>
+</html>

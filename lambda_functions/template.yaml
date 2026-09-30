@@ -1,0 +1,157 @@
+# ============================================================================
+# AWS SAM Template — All Lambda Functions
+# ============================================================================
+# Deploy with: sam build && sam deploy --guided
+# Test locally: sam local invoke DailyReminderFunction --event events/daily.json
+# ============================================================================
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Health Tracker Lambda Functions
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 120
+    MemorySize: 256
+    Environment:
+      Variables:
+        DATABASE_URL: !Ref DatabaseUrl
+        S3_BUCKET: !Ref S3BucketName
+        SES_FROM_EMAIL: !Ref SesFromEmail
+        GROQ_API_KEY: !Ref GroqApiKey
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    Description: PostgreSQL connection string
+  S3BucketName:
+    Type: String
+    Default: health-tracker
+  SesFromEmail:
+    Type: String
+    Default: noreply@healthtracker.app
+  GroqApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+
+Resources:
+  # ── Lambda 1: Daily Reminder ──
+  DailyReminderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: 01_daily_reminder/
+      Description: Send daily habit reminder emails
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 * * ? *)
+            Description: Every day at 8 AM UTC
+
+  # ── Lambda 2: Weekly Report ──
+  WeeklyReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: 02_weekly_report/
+      Timeout: 900
+      MemorySize: 512
+      Description: Generate and send weekly AI health reports
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 9 ? * SUN *)
+            Description: Every Sunday at 9 AM UTC
+
+  # ── Lambda 3: CSV Export ──
+  CsvExportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: 03_csv_export/
+      Description: Generate CSV export and email download link
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ExportQueue.Arn
+            BatchSize: 1
+
+  # ── Lambda 4: Streak Milestone ──
+  StreakMilestoneFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: 04_streak_milestone/
+      MemorySize: 128
+      Description: Check and celebrate streak milestones
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt StreakQueue.Arn
+            BatchSize: 1
+
+  # ── Lambda 5: Data Cleanup ──
+  DataCleanupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: 05_data_cleanup/
+      Description: Monthly cleanup of expired data
+      Events:
+        Schedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 1 * ? *)
+            Description: First day of every month
+
+  # ── Lambda 6: Document Processor ──
+  DocumentProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.lambda_handler
+      CodeUri: 06_document_processor/
+      MemorySize: 512
+      Timeout: 300
+      Description: Process uploaded PDFs for RAG (extract, chunk, embed)
+      Events:
+        S3Upload:
+          Type: S3
+          Properties:
+            Bucket: !Ref DocumentsBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: documents/
+
+  # ── SQS Queues ──
+  ExportQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: health-tracker-export
+      VisibilityTimeout: 300
+
+  StreakQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: health-tracker-streak
+      VisibilityTimeout: 60
+
+  # ── S3 Bucket ──
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+
+Outputs:
+  ExportQueueUrl:
+    Value: !Ref ExportQueue
+  StreakQueueUrl:
+    Value: !Ref StreakQueue

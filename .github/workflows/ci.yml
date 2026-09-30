@@ -1,0 +1,190 @@
+# ============================================================================
+# CI/CD Pipeline — GitHub Actions
+# ============================================================================
+# TRIGGERS:
+#   - Push to main or develop branches
+#   - Pull requests to main
+#
+# STAGES:
+#   1. Lint (parallel): ruff + mypy (backend), eslint (frontend)
+#   2. Test (parallel): pytest with real PostgreSQL + Redis, frontend build check
+#   3. Build: Docker images (only on main push)
+#
+# COST: $0 — GitHub Actions is free for public repositories (2,000 min/month)
+# ============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  # ═══════════════════════════════════════════
+  # Stage 1: Code Quality (runs in parallel)
+  # ═══════════════════════════════════════════
+
+  lint-backend:
+    name: "Lint Backend (Python)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install ruff mypy
+          pip install -r backend/requirements.txt
+        working-directory: .
+
+      - name: Ruff lint
+        run: ruff check app/
+        working-directory: backend
+
+      - name: Ruff format check
+        run: ruff format --check app/
+        working-directory: backend
+
+      - name: MyPy type check
+        run: mypy app/ --ignore-missing-imports
+        working-directory: backend
+
+  lint-frontend:
+    name: "Lint Frontend (TypeScript)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: TypeScript compile check
+        run: npx tsc --noEmit
+        working-directory: frontend
+
+  # ═══════════════════════════════════════════
+  # Stage 2: Tests (runs after lint passes)
+  # ═══════════════════════════════════════════
+
+  test-backend:
+    name: "Test Backend (pytest)"
+    needs: lint-backend
+    runs-on: ubuntu-latest
+
+    # Spin up PostgreSQL + Redis as service containers
+    # These are real databases — same as docker-compose.test.yml
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: healthtracker_test
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+        working-directory: backend
+
+      - name: Run unit tests
+        run: python -m pytest tests/unit -v --tb=short
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5433/healthtracker_test
+          DATABASE_URL_SYNC: postgresql://testuser:testpass@localhost:5433/healthtracker_test
+          REDIS_URL: redis://localhost:6380/0
+          SECRET_KEY: test-secret-key-for-ci
+          LLM_PROVIDER: ollama
+          EMAIL_PROVIDER: console
+
+      - name: Run integration tests
+        run: python -m pytest tests/integration -v --tb=short
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5433/healthtracker_test
+          DATABASE_URL_SYNC: postgresql://testuser:testpass@localhost:5433/healthtracker_test
+          REDIS_URL: redis://localhost:6380/0
+          SECRET_KEY: test-secret-key-for-ci
+          LLM_PROVIDER: ollama
+          EMAIL_PROVIDER: console
+
+  test-frontend:
+    name: "Build Frontend"
+    needs: lint-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+
+  # ═══════════════════════════════════════════
+  # Stage 3: Build Docker Images (main only)
+  # ═══════════════════════════════════════════
+
+  build-docker:
+    name: "Build Docker Images"
+    needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t health-tracker-backend ./backend
+
+      - name: Build frontend image
+        run: docker build -t health-tracker-frontend ./frontend
+
+      - name: Build successful
+        run: echo "✅ All Docker images built successfully"

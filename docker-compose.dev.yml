@@ -1,0 +1,42 @@
+# ============================================================================
+# Health Tracker — Docker Compose Development Override
+# ============================================================================
+# Usage (always combine with base):
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# What this adds:
+#   - Volume mounts for hot reload (code changes reflect instantly)
+#   - Debug-friendly settings
+#   - Uvicorn with --reload instead of gunicorn
+#   - Optional: Elasticsearch + Kibana for log exploration
+# ============================================================================
+
+services:
+  # Override backend to use uvicorn with hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development    # Use dev stage of multi-stage Dockerfile
+    volumes:
+      # Mount source code — changes reflect without rebuilding
+      - ./backend/app:/app/app:rw
+      - ./backend/tests:/app/tests:rw
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+
+  # Disable celery worker/beat in dev (run manually if needed)
+  celery-worker:
+    profiles:
+      - celery    # Only starts with: docker-compose --profile celery up
+
+  celery-beat:
+    profiles:
+      - celery
+
+  # Disable nginx in dev (access FastAPI directly on :8000)
+  nginx:
+    profiles:
+      - nginx

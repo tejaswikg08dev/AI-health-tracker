@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+    <div style="text-align: center; padding: 20px 0;">
+        <h1 style="color: #3B82F6; margin: 0;">🏥 Health Tracker</h1>
+    </div>
+
+    <div style="background: linear-gradient(135deg, #FEF3C7, #FDE68A); border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center;">
+        <div style="font-size: 64px;">🔥</div>
+        <h2 style="margin: 8px 0;">{{ streak_days }}-Day Streak!</h2>
+        <p style="font-size: 18px;">Incredible work on <strong>{{ habit_name }}</strong>, {{ name }}!</p>
+        <p>You've logged this habit for <strong>{{ streak_days }} consecutive days</strong>. Keep it going!</p>
+    </div>
+
+    <div style="text-align: center; margin: 24px 0;">
+        <a href="{{ app_url }}/analytics"
+           style="background: #F59E0B; color: white; padding: 12px 32px;
+                  border-radius: 8px; text-decoration: none; font-weight: 600;">
+            View Your Streaks →
+        </a>
+    </div>
+
+    <p style="color: #666; font-size: 12px; text-align: center;">
+        <a href="{{ app_url }}/settings">Update notification preferences</a>
+    </p>
+</body>
+</html>

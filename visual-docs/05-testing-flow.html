@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Testing Flow — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    .test-section { margin-bottom: var(--space-2xl); }
+    .test-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-md);
+      padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .test-header .th-icon { font-size: 1.5rem; }
+    .test-header .th-title { font-weight: 700; font-size: 1.1rem; flex: 1; }
+    .test-header .th-count { font-weight: 700; color: var(--green); }
+    .test-header .th-time { font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+    /* ── Test Result Rows ── */
+    .test-result {
+      display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+      border-bottom: 1px solid var(--border); font-size: 0.85rem;
+      opacity: 0; animation: fadeInUp 0.25s var(--ease-out) forwards;
+    }
+    .test-result:last-child { border-bottom: none; }
+    .test-icon { font-size: 0.9rem; flex-shrink: 0; }
+    .test-name { flex: 1; font-family: var(--font-mono); font-size: 0.78rem; }
+    .test-time { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
+    .test-pass { color: var(--green); }
+    .test-file-header {
+      font-weight: 600; font-size: 0.82rem; color: var(--text-secondary);
+      padding: 10px 14px 4px; margin-top: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ── Coverage Bars ── */
+    .cov-row {
+      display: flex; align-items: center; gap: 12px; padding: 8px 0;
+      opacity: 0; animation: fadeInUp 0.3s var(--ease-out) forwards;
+    }
+    .cov-module { width: 180px; font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cov-bar-bg { flex: 1; height: 10px; background: var(--gray-200); border-radius: 5px; overflow: hidden; }
+    .cov-bar-fill { height: 100%; border-radius: 5px; width: 0%; animation: progressFill 1.5s var(--ease-out) forwards; }
+    .cov-pct { width: 50px; text-align: right; font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; }
+
+    .test-summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: var(--space-xl) 0;
+    }
+    .ts-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; text-align: center;
+      opacity: 0; animation: scaleIn 0.4s var(--ease-spring) forwards;
+    }
+    .ts-val { font-size: 1.8rem; font-weight: 800; }
+    .ts-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+    @media (max-width: 768px) { .test-summary-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    /* stagger helpers */
+    .sd1{animation-delay:.05s}.sd2{animation-delay:.1s}.sd3{animation-delay:.15s}.sd4{animation-delay:.2s}
+    .sd5{animation-delay:.25s}.sd6{animation-delay:.3s}.sd7{animation-delay:.35s}.sd8{animation-delay:.4s}
+    .sd9{animation-delay:.45s}.sd10{animation-delay:.5s}.sd11{animation-delay:.55s}.sd12{animation-delay:.6s}
+    .sd13{animation-delay:.65s}.sd14{animation-delay:.7s}.sd15{animation-delay:.75s}.sd16{animation-delay:.8s}
+    .sd17{animation-delay:.85s}.sd18{animation-delay:.9s}.sd19{animation-delay:.95s}.sd20{animation-delay:1s}
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links"><a href="04-feature-demo.html">← Features</a><a href="06-docker-services.html">Next: Docker →</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">05 / 10 — Testing</div>
+      <h1 class="fade-in delay-1">🧪 Testing <span class="gradient-text">Flow</span></h1>
+      <p class="fade-in delay-2">62 tests across 7 files. Watch them tick by with green checkmarks — unit tests (no DB, ~2s), integration tests (real DB, ~10s), and the coverage report.</p>
+    </section>
+
+    <!-- Summary Cards -->
+    <div class="test-summary-grid">
+      <div class="ts-card" style="animation-delay:.1s"><div class="ts-val" style="color:var(--green)">62</div><div class="ts-label">Total Tests</div></div>
+      <div class="ts-card" style="animation-delay:.2s"><div class="ts-val" style="color:var(--brand-500)">38</div><div class="ts-label">Unit Tests</div></div>
+      <div class="ts-card" style="animation-delay:.3s"><div class="ts-val" style="color:var(--purple)">24</div><div class="ts-label">Integration Tests</div></div>
+      <div class="ts-card" style="animation-delay:.4s"><div class="ts-val" style="color:var(--green)">78%</div><div class="ts-label">Code Coverage</div></div>
+    </div>
+
+    <!-- ══════════ UNIT TESTS ══════════ -->
+    <div class="test-section fade-in delay-4">
+      <div class="test-header">
+        <span class="th-icon">⚡</span>
+        <span class="th-title">Unit Tests — No Database Required</span>
+        <span class="th-count">38 passed</span>
+        <span class="th-time">1.8s</span>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div class="test-file-header">📄 test_auth_security.py — JWT + Password Hashing (11 tests)</div>
+        <div class="test-result sd1"><span class="test-icon test-pass">✅</span><span class="test-name">test_hash_password_returns_hash</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd2"><span class="test-icon test-pass">✅</span><span class="test-name">test_verify_correct_password</span><span class="test-time">0.25s</span></div>
+        <div class="test-result sd3"><span class="test-icon test-pass">✅</span><span class="test-name">test_verify_wrong_password</span><span class="test-time">0.25s</span></div>
+        <div class="test-result sd4"><span class="test-icon test-pass">✅</span><span class="test-name">test_different_hashes_for_same_password</span><span class="test-time">0.50s</span></div>
+        <div class="test-result sd5"><span class="test-icon test-pass">✅</span><span class="test-name">test_create_access_token</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd6"><span class="test-icon test-pass">✅</span><span class="test-name">test_decode_valid_access_token</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd7"><span class="test-icon test-pass">✅</span><span class="test-name">test_create_refresh_token</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd8"><span class="test-icon test-pass">✅</span><span class="test-name">test_decode_wrong_type_raises_error</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd9"><span class="test-icon test-pass">✅</span><span class="test-name">test_decode_garbage_token_raises_error</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd10"><span class="test-icon test-pass">✅</span><span class="test-name">test_decode_empty_token_raises_error</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd11"><span class="test-icon test-pass">✅</span><span class="test-name">test_different_users_get_different_tokens</span><span class="test-time">0.01s</span></div>
+
+        <div class="test-file-header">📄 test_date_utils.py — Date & Timezone (12 tests)</div>
+        <div class="test-result sd12"><span class="test-icon test-pass">✅</span><span class="test-name">test_returns_timezone_aware</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd12"><span class="test-icon test-pass">✅</span><span class="test-name">test_convert_utc_to_india</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd13"><span class="test-icon test-pass">✅</span><span class="test-name">test_monday_is_start</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd13"><span class="test-icon test-pass">✅</span><span class="test-name">test_september_has_30_days</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd14"><span class="test-icon test-pass">✅</span><span class="test-name">test_february_non_leap</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd14"><span class="test-icon test-pass">✅</span><span class="test-name">test_generates_inclusive_range</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd15"><span class="test-icon test-pass">✅</span><span class="test-name">... +6 more date tests</span><span class="test-time">0.01s</span></div>
+
+        <div class="test-file-header">📄 test_rag_chunker.py — Text Chunking (7 tests)</div>
+        <div class="test-result sd15"><span class="test-icon test-pass">✅</span><span class="test-name">test_short_text_single_chunk</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd16"><span class="test-icon test-pass">✅</span><span class="test-name">test_empty_text_no_chunks</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd16"><span class="test-icon test-pass">✅</span><span class="test-name">test_long_text_multiple_chunks</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd17"><span class="test-icon test-pass">✅</span><span class="test-name">test_token_count_estimation</span><span class="test-time">0.01s</span></div>
+        <div class="test-result sd17"><span class="test-icon test-pass">✅</span><span class="test-name">... +3 more chunker tests</span><span class="test-time">0.01s</span></div>
+
+        <div class="test-file-header">📄 test_ai_agent.py — ReAct Agent Loop (8 tests)</div>
+        <div class="test-result sd18"><span class="test-icon test-pass">✅</span><span class="test-name">test_direct_response_no_tools</span><span class="test-time">0.02s</span></div>
+        <div class="test-result sd18"><span class="test-icon test-pass">✅</span><span class="test-name">test_agent_calls_tool_then_responds</span><span class="test-time">0.02s</span></div>
+        <div class="test-result sd19"><span class="test-icon test-pass">✅</span><span class="test-name">test_agent_respects_max_iterations</span><span class="test-time">0.03s</span></div>
+        <div class="test-result sd19"><span class="test-icon test-pass">✅</span><span class="test-name">test_memory_stores_conversation</span><span class="test-time">0.02s</span></div>
+        <div class="test-result sd20"><span class="test-icon test-pass">✅</span><span class="test-name">test_unknown_tool_handled_gracefully</span><span class="test-time">0.02s</span></div>
+        <div class="test-result sd20"><span class="test-icon test-pass">✅</span><span class="test-name">... +3 memory tests</span><span class="test-time">0.01s</span></div>
+      </div>
+
+      <div class="terminal" style="margin-top:16px;max-width:100%;">
+        <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div><span class="terminal-title">Unit Test Results</span></div>
+        <div class="terminal-body" style="min-height:auto;padding:12px 16px;">
+          <span class="terminal-success">━━━━━━━━━━━━━━━━ 38 passed in 1.8s ━━━━━━━━━━━━━━━━</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ INTEGRATION TESTS ══════════ -->
+    <div class="test-section fade-in delay-5">
+      <div class="test-header">
+        <span class="th-icon">🗄️</span>
+        <span class="th-title">Integration Tests — Real Database + HTTP</span>
+        <span class="th-count">24 passed</span>
+        <span class="th-time">8.2s</span>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div class="test-file-header">📄 test_auth_api.py — Signup / Login / Profile (10 tests)</div>
+        <div class="test-result sd1"><span class="test-icon test-pass">✅</span><span class="test-name">test_signup_success — 201 + user data</span><span class="test-time">0.4s</span></div>
+        <div class="test-result sd2"><span class="test-icon test-pass">✅</span><span class="test-name">test_signup_duplicate_email — 409</span><span class="test-time">0.3s</span></div>
+        <div class="test-result sd3"><span class="test-icon test-pass">✅</span><span class="test-name">test_signup_short_password — 422</span><span class="test-time">0.1s</span></div>
+        <div class="test-result sd4"><span class="test-icon test-pass">✅</span><span class="test-name">test_login_success — tokens returned</span><span class="test-time">0.5s</span></div>
+        <div class="test-result sd5"><span class="test-icon test-pass">✅</span><span class="test-name">test_login_wrong_password — 401</span><span class="test-time">0.3s</span></div>
+        <div class="test-result sd6"><span class="test-icon test-pass">✅</span><span class="test-name">test_get_profile_authenticated — 200</span><span class="test-time">0.2s</span></div>
+        <div class="test-result sd6"><span class="test-icon test-pass">✅</span><span class="test-name">test_get_profile_no_token — 401</span><span class="test-time">0.1s</span></div>
+        <div class="test-result sd7"><span class="test-icon test-pass">✅</span><span class="test-name">... +3 more auth tests</span><span class="test-time">0.3s</span></div>
+
+        <div class="test-file-header">📄 test_habits_api.py — CRUD (7 tests)</div>
+        <div class="test-result sd8"><span class="test-icon test-pass">✅</span><span class="test-name">test_create_numeric_habit — 201</span><span class="test-time">0.2s</span></div>
+        <div class="test-result sd9"><span class="test-icon test-pass">✅</span><span class="test-name">test_create_requires_auth — 401</span><span class="test-time">0.1s</span></div>
+        <div class="test-result sd10"><span class="test-icon test-pass">✅</span><span class="test-name">test_list_habits_after_create — 2 habits</span><span class="test-time">0.3s</span></div>
+        <div class="test-result sd11"><span class="test-icon test-pass">✅</span><span class="test-name">test_archive_habit — soft delete verified</span><span class="test-time">0.3s</span></div>
+        <div class="test-result sd12"><span class="test-icon test-pass">✅</span><span class="test-name">... +3 more habit tests</span><span class="test-time">0.3s</span></div>
+
+        <div class="test-file-header">📄 test_logs_api.py — Log CRUD + Bulk (7 tests)</div>
+        <div class="test-result sd13"><span class="test-icon test-pass">✅</span><span class="test-name">test_create_numeric_log — 201</span><span class="test-time">0.3s</span></div>
+        <div class="test-result sd14"><span class="test-icon test-pass">✅</span><span class="test-name">test_reject_future_date — 422</span><span class="test-time">0.1s</span></div>
+        <div class="test-result sd15"><span class="test-icon test-pass">✅</span><span class="test-name">test_bulk_create — 2 logs created</span><span class="test-time">0.4s</span></div>
+        <div class="test-result sd16"><span class="test-icon test-pass">✅</span><span class="test-name">... +4 more log tests</span><span class="test-time">0.5s</span></div>
+      </div>
+
+      <div class="terminal" style="margin-top:16px;max-width:100%;">
+        <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div><span class="terminal-title">Integration Test Results</span></div>
+        <div class="terminal-body" style="min-height:auto;padding:12px 16px;">
+          <span class="terminal-success">━━━━━━━━━━━━━━━━ 24 passed in 8.2s ━━━━━━━━━━━━━━━━</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ COVERAGE ══════════ -->
+    <div class="test-section fade-in delay-6">
+      <div class="test-header">
+        <span class="th-icon">📊</span>
+        <span class="th-title">Code Coverage Report</span>
+        <span class="th-count" style="color:var(--brand-500)">78%</span>
+        <span class="th-time">above 70% threshold ✅</span>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div class="cov-row" style="animation-delay:.1s"><span class="cov-module">app/modules/auth</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:92%;background:var(--green);animation-delay:.3s"></div></div><span class="cov-pct" style="color:var(--green)">92%</span></div>
+        <div class="cov-row" style="animation-delay:.2s"><span class="cov-module">app/modules/habits</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:88%;background:var(--green);animation-delay:.4s"></div></div><span class="cov-pct" style="color:var(--green)">88%</span></div>
+        <div class="cov-row" style="animation-delay:.3s"><span class="cov-module">app/modules/logs</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:85%;background:var(--green);animation-delay:.5s"></div></div><span class="cov-pct" style="color:var(--green)">85%</span></div>
+        <div class="cov-row" style="animation-delay:.4s"><span class="cov-module">app/modules/analytics</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:72%;background:var(--orange);animation-delay:.6s"></div></div><span class="cov-pct" style="color:var(--orange)">72%</span></div>
+        <div class="cov-row" style="animation-delay:.5s"><span class="cov-module">app/modules/ai</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:65%;background:var(--orange);animation-delay:.7s"></div></div><span class="cov-pct" style="color:var(--orange)">65%</span></div>
+        <div class="cov-row" style="animation-delay:.6s"><span class="cov-module">app/modules/notifications</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:70%;background:var(--orange);animation-delay:.8s"></div></div><span class="cov-pct" style="color:var(--orange)">70%</span></div>
+        <div class="cov-row" style="animation-delay:.7s"><span class="cov-module">app/modules/export</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:75%;background:var(--green);animation-delay:.9s"></div></div><span class="cov-pct" style="color:var(--green)">75%</span></div>
+        <div class="cov-row" style="animation-delay:.8s"><span class="cov-module">app/shared</span><div class="cov-bar-bg"><div class="cov-bar-fill" style="--target-width:90%;background:var(--green);animation-delay:1s"></div></div><span class="cov-pct" style="color:var(--green)">90%</span></div>
+        <div style="margin-top:16px;padding-top:12px;border-top:2px solid var(--border);display:flex;align-items:center;gap:12px;">
+          <span style="font-weight:700;font-size:1.1rem;">TOTAL</span>
+          <div class="cov-bar-bg" style="flex:1;height:14px;"><div class="cov-bar-fill" style="--target-width:78%;background:linear-gradient(90deg,var(--brand-500),var(--green));animation-delay:1.2s;height:100%;"></div></div>
+          <span style="font-weight:800;font-size:1.2rem;color:var(--green);">78%</span>
+          <span class="chip chip-green">Above 70% ✅</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p><a href="04-feature-demo.html" style="color:var(--brand-500);text-decoration:none;">← Features</a> · Testing Flow · <a href="06-docker-services.html" style="color:var(--brand-500);text-decoration:none;">Docker Services →</a></p>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# ============================================================================
+# Health Tracker — Development & Testing Dependencies
+# ============================================================================
+# Install: pip install -r requirements-dev.txt
+# (This includes production deps too)
+# ============================================================================
+
+# Include all production dependencies
+-r requirements.txt
+
+# ── Testing ──
+pytest==8.3.3               # Test framework — fixtures, parametrize, markers
+pytest-asyncio==0.24.0      # Test async FastAPI endpoints and SQLAlchemy queries
+pytest-cov==5.0.0           # Code coverage reporting
+factory-boy==3.3.1          # Test data factories — generate realistic fake data
+moto[s3,sqs,ses]==5.0.13    # Mock AWS services in tests (S3, SQS, SES)
+
+# ── Code Quality ──
+ruff==0.6.5                 # Python linter + formatter (replaces flake8, black, isort)
+mypy==1.11.2                # Static type checker — catches type errors before runtime
+
+# ── Development ──
+ipython==8.27.0             # Better Python REPL for debugging
+rich==13.8.1                # Pretty terminal output

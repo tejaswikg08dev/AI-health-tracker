@@ -1,0 +1,39 @@
+# ============================================================================
+# Health Tracker — Docker Compose for Testing
+# ============================================================================
+# Usage:
+#   docker-compose -f docker-compose.test.yml up -d
+#   cd backend && pytest
+#   docker-compose -f docker-compose.test.yml down
+#
+# Minimal: Only PostgreSQL + Redis — just enough to run tests
+# ============================================================================
+
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    container_name: ht-postgres-test
+    ports:
+      - "5433:5432"    # Different port to avoid conflict with dev DB
+    environment:
+      POSTGRES_DB: healthtracker_test
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d healthtracker_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    tmpfs:
+      - /var/lib/postgresql/data    # In-memory for speed — data doesn't persist
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: ht-redis-test
+    ports:
+      - "6380:6379"    # Different port to avoid conflict with dev Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5

@@ -1,0 +1,4 @@
+# This directory holds SSL certificates.
+# In development: self-signed (or just use HTTP).
+# In production: Let's Encrypt or AWS Certificate Manager.
+# Never commit real certificates to git.

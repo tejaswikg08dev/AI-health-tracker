@@ -1,0 +1,80 @@
+# ============================================================================
+# Health Tracker — .gitignore
+# ============================================================================
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# ── Virtual Environment ──
+venv/
+.venv/
+env/
+ENV/
+
+# ── Environment Variables (NEVER commit secrets) ──
+.env
+.env.local
+.env.production
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Testing ──
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.pytest_cache/
+.mypy_cache/
+
+# ── Node / Frontend ──
+node_modules/
+frontend/dist/
+frontend/build/
+.next/
+
+# ── Docker ──
+docker-compose.override.yml
+
+# ── Database ──
+*.db
+*.sqlite3
+
+# ── Logs ──
+*.log
+logs/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── SSL Certificates ──
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+
+# ── Alembic ──
+# Don't ignore versions/ — migrations should be committed
+# alembic/versions/ is tracked
+
+# ── MinIO data ──
+minio_data/
+
+# ── Ollama models ──
+ollama_data/

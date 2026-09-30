@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+    <div style="text-align: center; padding: 20px 0;">
+        <h1 style="color: #3B82F6; margin: 0;">🏥 Health Tracker</h1>
+    </div>
+
+    <div style="background: #F0F9FF; border-radius: 12px; padding: 24px; margin: 20px 0;">
+        <h2 style="margin-top: 0;">Hey {{ name }}! 👋</h2>
+        <p>It's time to log your habits for <strong>{{ date }}</strong>.</p>
+        <p>You're on a roll — keep the momentum going!</p>
+
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{{ app_url }}/check-in"
+               style="background: #3B82F6; color: white; padding: 12px 32px;
+                      border-radius: 8px; text-decoration: none; font-weight: 600;">
+                Log Today's Habits →
+            </a>
+        </div>
+    </div>
+
+    <p style="color: #666; font-size: 12px; text-align: center;">
+        You're receiving this because you enabled daily reminders.
+        <a href="{{ app_url }}/settings">Update preferences</a>
+    </p>
+</body>
+</html>

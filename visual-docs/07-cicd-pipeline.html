@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI/CD Pipeline — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── Pipeline Stages ── */
+    .pipeline { max-width: 900px; margin: var(--space-xl) auto; }
+    .stage {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+      margin-bottom: 16px; overflow: hidden; opacity: 0;
+      animation: fadeInUp 0.5s var(--ease-out) forwards;
+    }
+    .stage-header {
+      display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+      border-bottom: 1px solid var(--border); cursor: pointer;
+    }
+    .stage-header:hover { background: var(--bg-secondary); }
+    .stage-num {
+      width: 32px; height: 32px; border-radius: 10px; display: flex;
+      align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; color: white;
+    }
+    .stage-title { font-weight: 700; flex: 1; }
+    .stage-meta { display: flex; align-items: center; gap: 12px; }
+    .stage-time { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
+    .stage-status {
+      padding: 3px 10px; border-radius: 50px; font-size: 0.72rem; font-weight: 700;
+    }
+    .stage-status.pass { background: var(--green-light); color: #065F46; }
+    .stage-status.skip { background: var(--gray-100); color: var(--gray-500); }
+    @media (prefers-color-scheme: dark) {
+      .stage-status.pass { background: rgba(16,185,129,0.15); color: var(--green); }
+      .stage-status.skip { background: rgba(255,255,255,0.05); }
+    }
+
+    .stage-body { padding: 0 20px 16px; }
+
+    /* ── Job Cards inside stages ── */
+    .job-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+    .job {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; opacity: 0; animation: scaleIn 0.4s var(--ease-spring) forwards;
+    }
+    .job-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .job-icon { font-size: 1.1rem; }
+    .job-name { font-weight: 600; font-size: 0.9rem; }
+    .job-steps { font-size: 0.78rem; color: var(--text-secondary); }
+    .job-step {
+      display: flex; align-items: center; gap: 6px; padding: 3px 0;
+    }
+    .step-check { color: var(--green); font-size: 0.75rem; }
+    .step-text { flex: 1; }
+    .step-dur { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted); }
+
+    /* ── Trigger Indicator ── */
+    .trigger-box {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: var(--space-lg); max-width: 500px; margin-left: auto; margin-right: auto;
+    }
+    .trigger-event { font-weight: 700; color: var(--brand-600); }
+
+    /* ── Pipeline Arrow ── */
+    .pipe-arrow {
+      text-align: center; padding: 6px 0; font-size: 1.2rem; color: var(--brand-400);
+      animation: arrowBounce 2s ease infinite;
+    }
+    @keyframes arrowBounce { 0%,100%{transform:translateY(0);opacity:.5} 50%{transform:translateY(3px);opacity:1} }
+
+    /* ── Service containers visual ── */
+    .svc-containers {
+      display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;
+    }
+    .svc-mini {
+      padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
+      border: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
+    }
+    .svc-mini .mini-dot { width: 6px; height: 6px; border-radius: 50%; animation: pulse 2s ease infinite; }
+
+    /* ── Stagger ── */
+    .sd1{animation-delay:.1s}.sd2{animation-delay:.2s}.sd3{animation-delay:.3s}.sd4{animation-delay:.4s}
+    .sd5{animation-delay:.5s}
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links"><a href="06-docker-services.html">← Docker</a><a href="08-aws-deployment.html">Next: AWS →</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">07 / 10 — CI/CD</div>
+      <h1 class="fade-in delay-1">🔄 CI/CD <span class="gradient-text">Pipeline</span></h1>
+      <p class="fade-in delay-2">GitHub Actions: 3 stages, 5 jobs. Lint in parallel, test with real databases, build Docker images. Runs on every push. Cost: $0.</p>
+    </section>
+
+    <div class="stats-bar fade-in delay-3">
+      <div class="stat"><span class="stat-value">3</span><span class="stat-label">Stages</span></div>
+      <div class="stat"><span class="stat-value">5</span><span class="stat-label">Jobs</span></div>
+      <div class="stat"><span class="stat-value">~4 min</span><span class="stat-label">Total Time</span></div>
+      <div class="stat"><span class="stat-value">$0</span><span class="stat-label">Monthly Cost</span></div>
+    </div>
+
+    <!-- Trigger -->
+    <div class="trigger-box fade-in delay-3">
+      <span style="font-size:1.3rem;">📌</span>
+      <div>
+        <div class="trigger-event">git push origin main</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">Triggers on: push to main/develop, PRs to main</div>
+      </div>
+    </div>
+
+    <!-- ══════════ PIPELINE ══════════ -->
+    <div class="pipeline">
+
+      <!-- Stage 1: Lint -->
+      <div class="stage sd1">
+        <div class="stage-header">
+          <div class="stage-num" style="background:var(--orange);">1</div>
+          <span class="stage-title">Stage 1: Code Quality (Lint)</span>
+          <div class="stage-meta">
+            <span class="stage-time">~32s</span>
+            <span class="stage-status pass">✅ Passed</span>
+          </div>
+        </div>
+        <div class="stage-body">
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;">Two jobs run <strong>in parallel</strong> — backend and frontend linting don't depend on each other.</p>
+          <div class="job-grid">
+            <div class="job sd2">
+              <div class="job-header"><span class="job-icon">🐍</span><span class="job-name">lint-backend</span></div>
+              <div class="job-steps">
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">Setup Python 3.11</span><span class="step-dur">3s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">Install ruff + mypy + requirements</span><span class="step-dur">12s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">ruff check app/</span><span class="step-dur">2s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">ruff format --check app/</span><span class="step-dur">1s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">mypy app/ --ignore-missing-imports</span><span class="step-dur">8s</span></div>
+              </div>
+            </div>
+            <div class="job sd3">
+              <div class="job-header"><span class="job-icon">📘</span><span class="job-name">lint-frontend</span></div>
+              <div class="job-steps">
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">Setup Node 20 + cache npm</span><span class="step-dur">4s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">npm ci (from lockfile)</span><span class="step-dur">15s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">npx tsc --noEmit</span><span class="step-dur">8s</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow">▼ needs: lint passed</div>
+
+      <!-- Stage 2: Test -->
+      <div class="stage sd3">
+        <div class="stage-header">
+          <div class="stage-num" style="background:var(--brand-500);">2</div>
+          <span class="stage-title">Stage 2: Tests</span>
+          <div class="stage-meta">
+            <span class="stage-time">~2m 15s</span>
+            <span class="stage-status pass">✅ Passed</span>
+          </div>
+        </div>
+        <div class="stage-body">
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;">Backend tests use <strong>real PostgreSQL + Redis</strong> as service containers — same images as production.</p>
+
+          <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">Service Containers (spun up by GitHub Actions):</div>
+          <div class="svc-containers">
+            <span class="svc-mini"><span class="mini-dot" style="background:var(--purple);"></span>🐘 pgvector:pg16 (:5433)</span>
+            <span class="svc-mini"><span class="mini-dot" style="background:var(--red);"></span>🔴 redis:7-alpine (:6380)</span>
+          </div>
+
+          <div class="job-grid">
+            <div class="job sd4">
+              <div class="job-header"><span class="job-icon">🧪</span><span class="job-name">test-backend</span></div>
+              <div class="job-steps">
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">Wait for DB health checks</span><span class="step-dur">10s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">pip install requirements-dev.txt</span><span class="step-dur">20s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">pytest tests/unit — 38 passed</span><span class="step-dur">2s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">pytest tests/integration — 24 passed</span><span class="step-dur">8s</span></div>
+              </div>
+            </div>
+            <div class="job sd5">
+              <div class="job-header"><span class="job-icon">⚛️</span><span class="job-name">test-frontend</span></div>
+              <div class="job-steps">
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">npm ci (cached from Stage 1)</span><span class="step-dur">8s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">npm run build (tsc + vite)</span><span class="step-dur">25s</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow">▼ needs: tests passed + main branch only</div>
+
+      <!-- Stage 3: Build -->
+      <div class="stage sd5">
+        <div class="stage-header">
+          <div class="stage-num" style="background:var(--green);">3</div>
+          <span class="stage-title">Stage 3: Build Docker Images</span>
+          <div class="stage-meta">
+            <span class="stage-time">~1m 45s</span>
+            <span class="stage-status pass">✅ Passed</span>
+          </div>
+        </div>
+        <div class="stage-body">
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;"><strong>Only runs on push to main</strong> (not on PRs or develop). PRs get lint + test but skip the build.</p>
+          <div class="job-grid">
+            <div class="job sd5">
+              <div class="job-header"><span class="job-icon">🐳</span><span class="job-name">build-docker</span></div>
+              <div class="job-steps">
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">docker build backend (multi-stage)</span><span class="step-dur">55s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">docker build frontend</span><span class="step-dur">40s</span></div>
+                <div class="job-step"><span class="step-check">✅</span><span class="step-text">All images built successfully</span><span class="step-dur">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PIPELINE RESULT ══════════ -->
+    <div style="text-align:center;margin:var(--space-xl) 0;">
+      <div style="display:inline-flex;align-items:center;gap:12px;padding:16px 30px;background:var(--green-light);border:2px solid var(--green);border-radius:14px;font-weight:700;font-size:1.1rem;color:#065F46;animation:scaleIn 0.5s var(--ease-spring) 0.8s both;">
+        <span style="font-size:1.5rem;">✅</span> Pipeline Passed — 4m 32s total
+      </div>
+    </div>
+
+    <!-- ══════════ WHAT IF IT FAILS ══════════ -->
+    <section class="section">
+      <h2 class="section-title">What Happens on Failure?</h2>
+      <div class="card-grid">
+        <div class="card fade-in delay-3">
+          <h3 style="color:var(--red);">❌ Lint Fails</h3>
+          <p>Tests never run — saves 3 minutes of CI time. Fix the lint error, push again. <code>ruff format app/</code> auto-fixes most issues.</p>
+        </div>
+        <div class="card fade-in delay-4">
+          <h3 style="color:var(--red);">❌ Test Fails</h3>
+          <p>Docker build never runs. The failing test name + traceback appear in the job log. Fix the test, push again.</p>
+        </div>
+        <div class="card fade-in delay-5">
+          <h3 style="color:var(--orange);">🔀 PR vs Push</h3>
+          <p>PRs run lint + test only (fast feedback). Push to main runs all 3 stages including Docker build. This saves build minutes on feature branches.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p><a href="06-docker-services.html" style="color:var(--brand-500);text-decoration:none;">← Docker</a> · CI/CD Pipeline · <a href="08-aws-deployment.html" style="color:var(--brand-500);text-decoration:none;">AWS Deployment →</a></p>
+    </footer>
+  </div>
+</body>
+</html>

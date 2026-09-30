@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture Overview — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── Architecture Grid ── */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .arch-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .arch-row.spread { justify-content: space-around; }
+
+    /* ── Arrow between rows ── */
+    .arch-arrow {
+      text-align: center;
+      font-size: 1.5rem;
+      color: var(--brand-400);
+      animation: arrowBounce 2s ease-in-out infinite;
+      padding: 4px 0;
+    }
+    @keyframes arrowBounce {
+      0%, 100% { transform: translateY(0); opacity: 0.6; }
+      50% { transform: translateY(4px); opacity: 1; }
+    }
+    .arch-arrow.horizontal { display: inline; animation: arrowSlide 1.5s ease-in-out infinite; }
+    @keyframes arrowSlide {
+      0%, 100% { transform: translateX(0); opacity: 0.6; }
+      50% { transform: translateX(4px); opacity: 1; }
+    }
+
+    /* ── Module boxes inside backend ── */
+    .backend-modules {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .module-chip {
+      background: var(--brand-50);
+      border: 1px solid var(--brand-200);
+      border-radius: 8px;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--brand-700);
+      transition: all 0.3s;
+      cursor: default;
+    }
+    .module-chip:hover {
+      background: var(--brand-100);
+      transform: scale(1.05);
+    }
+    @media (prefers-color-scheme: dark) {
+      .module-chip { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: var(--brand-300); }
+    }
+
+    /* ── Flow Selector Buttons ── */
+    .flow-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: var(--space-xl) 0;
+      flex-wrap: wrap;
+    }
+    .flow-btn {
+      padding: 10px 20px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-card);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      transition: all 0.3s var(--ease-out);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .flow-btn:hover { border-color: var(--brand-400); box-shadow: var(--shadow-glow); transform: translateY(-2px); }
+    .flow-btn.active { border-color: var(--brand-500); background: var(--brand-50); color: var(--brand-700); }
+    @media (prefers-color-scheme: dark) {
+      .flow-btn.active { background: rgba(59,130,246,0.15); }
+    }
+
+    /* ── Flow Highlight ── */
+    .flow-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: var(--space-lg);
+      display: none;
+      animation: fadeInUp 0.5s var(--ease-out);
+    }
+    .flow-panel.active { display: block; }
+    .flow-panel h3 { margin-bottom: var(--space-md); }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      opacity: 0;
+      animation: fadeInUp 0.4s var(--ease-out) forwards;
+    }
+    .flow-step:last-child { border-bottom: none; }
+    .flow-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--brand-500);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .flow-step-content { flex: 1; }
+    .flow-step-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; }
+    .flow-step-detail { font-size: 0.82rem; color: var(--text-secondary); }
+    .flow-step-code {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      margin-top: 6px;
+      color: var(--brand-600);
+      display: inline-block;
+    }
+
+    /* ── Tech Detail Table ── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: var(--space-lg);
+    }
+    .detail-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .detail-item .di-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .detail-item .di-value { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+    .detail-item .di-sub { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+
+    /* ── Stagger flow steps ── */
+    .flow-step:nth-child(1) { animation-delay: 0.05s; }
+    .flow-step:nth-child(2) { animation-delay: 0.1s; }
+    .flow-step:nth-child(3) { animation-delay: 0.15s; }
+    .flow-step:nth-child(4) { animation-delay: 0.2s; }
+    .flow-step:nth-child(5) { animation-delay: 0.25s; }
+    .flow-step:nth-child(6) { animation-delay: 0.3s; }
+    .flow-step:nth-child(7) { animation-delay: 0.35s; }
+    .flow-step:nth-child(8) { animation-delay: 0.4s; }
+    .flow-step:nth-child(9) { animation-delay: 0.45s; }
+    .flow-step:nth-child(10) { animation-delay: 0.5s; }
+
+    /* ── Responsive arch ── */
+    @media (max-width: 768px) {
+      .backend-modules { grid-template-columns: repeat(2, 1fr); }
+      .arch-box { padding: 10px; }
+      .arch-box .icon { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container page">
+
+    <!-- Nav -->
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links">
+        <a href="index.html">← All Guides</a>
+        <a href="02-request-flow.html">Next: Request Flow →</a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="badge fade-in">01 / 10 — Architecture</div>
+      <h1 class="fade-in delay-1">🏗️ System <span class="gradient-text">Architecture</span></h1>
+      <p class="fade-in delay-2">The complete system — every component, every connection, every data flow. Hover to explore, click a flow to trace it step by step.</p>
+    </section>
+
+    <!-- Project Stats -->
+    <div class="detail-grid fade-in delay-3">
+      <div class="detail-item">
+        <div class="di-label">Backend</div>
+        <div class="di-value">Python / FastAPI</div>
+        <div class="di-sub">7 modules, 38 endpoints, async SQLAlchemy</div>
+      </div>
+      <div class="detail-item">
+        <div class="di-label">Frontend</div>
+        <div class="di-value">React 18 / TypeScript</div>
+        <div class="di-sub">8 pages, TanStack Query, Zustand, Recharts</div>
+      </div>
+      <div class="detail-item">
+        <div class="di-label">AI (from scratch)</div>
+        <div class="di-value">LLM + RAG + Agent + Workflow</div>
+        <div class="di-sub">39 files, 3 providers, 5 tools, ReAct loop</div>
+      </div>
+      <div class="detail-item">
+        <div class="di-label">Infrastructure</div>
+        <div class="di-value">Docker + Lambda + CI/CD</div>
+        <div class="di-sub">8 services, 6 Lambdas, GitHub Actions</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!--  ARCHITECTURE DIAGRAM (Animated)            -->
+    <!-- ════════════════════════════════════════════ -->
+    <section class="section">
+      <h2 class="section-title fade-in delay-3">System Diagram</h2>
+
+      <div class="arch-grid">
+
+        <!-- Row 1: Frontend -->
+        <div class="arch-row fade-in delay-3">
+          <div class="arch-box frontend" style="min-width: 280px;" data-tip="50 files: 8 pages, 14 components, 8 services">
+            <div class="icon">⚛️</div>
+            <div class="label">Frontend — React 18</div>
+            <div class="sub">TypeScript · TanStack Query · Zustand · Recharts · Tailwind</div>
+            <div style="display:flex; gap:6px; justify-content:center; margin-top:8px; flex-wrap:wrap;">
+              <span class="chip chip-blue">8 Pages</span>
+              <span class="chip chip-blue">14 Components</span>
+              <span class="chip chip-blue">3 Charts</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-arrow fade-in delay-4">▼ HTTP / JSON</div>
+
+        <!-- Row 2: Nginx -->
+        <div class="arch-row fade-in delay-4">
+          <div class="arch-box nginx" style="min-width: 280px;" data-tip="Rate limiting: 30r/s API, 2r/s AI, 5r/m login">
+            <div class="icon">🌐</div>
+            <div class="label">Nginx — Reverse Proxy</div>
+            <div class="sub">Rate Limiting · Security Headers · Gzip · SSE Support</div>
+            <div style="display:flex; gap:6px; justify-content:center; margin-top:8px; flex-wrap:wrap;">
+              <span class="chip chip-green">30 req/s</span>
+              <span class="chip chip-green">Gzip 6x</span>
+              <span class="chip chip-green">Anti-Brute</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-arrow fade-in delay-5">▼ proxy_pass :8000</div>
+
+        <!-- Row 3: Backend -->
+        <div class="arch-row fade-in delay-5">
+          <div class="arch-box backend" style="min-width: 500px; max-width: 700px;" data-tip="120+ files across 7 modules">
+            <div class="icon">⚡</div>
+            <div class="label">Backend — FastAPI (Python 3.11)</div>
+            <div class="sub">Async · JWT Auth · Dependency Injection · Structured Logging</div>
+            <div class="backend-modules">
+              <div class="module-chip">🔑 Auth<br><span style="font-weight:400;font-size:0.65rem;">JWT + bcrypt</span></div>
+              <div class="module-chip">📋 Habits<br><span style="font-weight:400;font-size:0.65rem;">CRUD + reorder</span></div>
+              <div class="module-chip">📝 Logs<br><span style="font-weight:400;font-size:0.65rem;">Bulk + validate</span></div>
+              <div class="module-chip">📊 Analytics<br><span style="font-weight:400;font-size:0.65rem;">6 SQL queries</span></div>
+              <div class="module-chip">🤖 AI (39 files)<br><span style="font-weight:400;font-size:0.65rem;">LLM·RAG·Agent·Wkflw</span></div>
+              <div class="module-chip">🔔 Notifications<br><span style="font-weight:400;font-size:0.65rem;">4 types + SES</span></div>
+              <div class="module-chip">📁 Export<br><span style="font-weight:400;font-size:0.65rem;">CSV + S3</span></div>
+              <div class="module-chip">⚙️ Shared<br><span style="font-weight:400;font-size:0.65rem;">Logging·Error·Util</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-arrow fade-in delay-6">▼ async queries</div>
+
+        <!-- Row 4: Data Stores -->
+        <div class="arch-row spread fade-in delay-6">
+          <div class="arch-box database" data-tip="8 tables, pgvector for RAG embeddings">
+            <div class="icon">🐘</div>
+            <div class="label">PostgreSQL + pgvector</div>
+            <div class="sub">8 tables · vector(768) · IVFFlat index</div>
+          </div>
+          <div class="arch-box database" style="border-color: var(--red);" data-tip="Cache, rate limit, Celery broker, token blacklist">
+            <div class="icon">🔴</div>
+            <div class="label">Redis</div>
+            <div class="sub">Cache · Broker · Rate Limit</div>
+          </div>
+          <div class="arch-box database" style="border-color: var(--green);" data-tip="MinIO locally, AWS S3 in production">
+            <div class="icon">📦</div>
+            <div class="label">MinIO / S3</div>
+            <div class="sub">Exports · Documents</div>
+          </div>
+          <div class="arch-box database" style="border-color: var(--orange);" data-tip="Free local LLM: llama3.1:8b + nomic-embed-text">
+            <div class="icon">🧠</div>
+            <div class="label">Ollama / Groq</div>
+            <div class="sub">LLM API · Embeddings</div>
+          </div>
+        </div>
+
+        <!-- Row 5: Divider -->
+        <div style="text-align:center; padding: 16px 0; color: var(--text-muted); font-size: 0.8rem;" class="fade-in delay-7">
+          ─────── Serverless Layer (AWS Lambda) ───────
+        </div>
+
+        <!-- Row 6: Lambda -->
+        <div class="arch-row spread fade-in delay-7">
+          <div class="arch-box lambda" data-tip="EventBridge cron: 8AM daily">
+            <div class="icon">⏰</div>
+            <div class="label">Daily Reminder</div>
+            <div class="sub">Cron → SES Email</div>
+          </div>
+          <div class="arch-box lambda" data-tip="EventBridge cron: Sunday 9AM">
+            <div class="icon">📊</div>
+            <div class="label">Weekly Report</div>
+            <div class="sub">Cron → Groq → S3</div>
+          </div>
+          <div class="arch-box lambda" data-tip="SQS trigger from API">
+            <div class="icon">📁</div>
+            <div class="label">CSV Export</div>
+            <div class="sub">SQS → S3 → Email</div>
+          </div>
+          <div class="arch-box lambda" data-tip="SQS trigger after log creation">
+            <div class="icon">🔥</div>
+            <div class="label">Streak Check</div>
+            <div class="sub">SQS → DB → Email</div>
+          </div>
+          <div class="arch-box lambda" data-tip="EventBridge cron: 1st of month">
+            <div class="icon">🧹</div>
+            <div class="label">Data Cleanup</div>
+            <div class="sub">Cron → VACUUM</div>
+          </div>
+          <div class="arch-box lambda" data-tip="S3 PutObject trigger">
+            <div class="icon">📄</div>
+            <div class="label">Doc Processor</div>
+            <div class="sub">S3 → Chunk → pgvector</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!--  FLOW TRACER (Click to animate)             -->
+    <!-- ════════════════════════════════════════════ -->
+    <section class="section">
+      <h2 class="section-title">Trace a Data Flow</h2>
+      <p style="text-align:center; margin-bottom: var(--space-lg);">Click a flow to see each step animated with the actual code that runs.</p>
+
+      <div class="flow-buttons">
+        <button class="flow-btn active" onclick="showFlow('login')">🔑 Login Flow</button>
+        <button class="flow-btn" onclick="showFlow('checkin')">✅ Daily Check-In</button>
+        <button class="flow-btn" onclick="showFlow('aichat')">🤖 AI Chat</button>
+        <button class="flow-btn" onclick="showFlow('lambda')">☁️ Lambda Trigger</button>
+      </div>
+
+      <!-- Login Flow -->
+      <div class="flow-panel active" id="flow-login">
+        <h3>🔑 Login → Dashboard Flow</h3>
+        <div class="flow-step"><span class="flow-step-num">1</span><div class="flow-step-content"><div class="flow-step-title">User clicks "Sign In"</div><div class="flow-step-detail">LoginPage.tsx calls useAuthStore.login(email, password)</div><div class="flow-step-code">await login(email, password);</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">2</span><div class="flow-step-content"><div class="flow-step-title">Zustand → Auth Service</div><div class="flow-step-detail">Zustand store calls authService.login() which calls the axios API client</div><div class="flow-step-code">api.post&lt;AuthTokens&gt;("/auth/login", data)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">3</span><div class="flow-step-content"><div class="flow-step-title">Nginx Rate Check</div><div class="flow-step-detail">Login rate limit: 5 req/min per IP (anti-brute-force). PASS → proxy to :8000</div><div class="flow-step-code">limit_req zone=login_limit burst=3 nodelay;</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">4</span><div class="flow-step-content"><div class="flow-step-title">FastAPI Auth Router</div><div class="flow-step-detail">POST /api/v1/auth/login → AuthService.authenticate()</div><div class="flow-step-code">user = await auth_service.authenticate(email, password)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">5</span><div class="flow-step-content"><div class="flow-step-title">bcrypt Verify</div><div class="flow-step-detail">Hash the attempt, compare with stored hash. Takes ~250ms intentionally (anti-brute-force).</div><div class="flow-step-code">verify_password(plain_password, user.password_hash) → True ✅</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">6</span><div class="flow-step-content"><div class="flow-step-title">JWT Creation</div><div class="flow-step-detail">Create access token (30 min) + refresh token (7 days). Payload: {sub: user_id, type: "access", exp: ...}</div><div class="flow-step-code">access = create_access_token(user.id) → "eyJhbGciOi..."</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">7</span><div class="flow-step-content"><div class="flow-step-title">Tokens Stored</div><div class="flow-step-detail">Frontend saves tokens to localStorage. Zustand sets isAuthenticated = true.</div><div class="flow-step-code">localStorage.setItem("access_token", tokens.access_token)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">8</span><div class="flow-step-content"><div class="flow-step-title">Navigate to Dashboard</div><div class="flow-step-detail">React Router navigates to /. useDashboard() fires GET /analytics/dashboard with JWT attached by axios interceptor.</div><div class="flow-step-code">navigate("/") → DashboardPage → useDashboard()</div></div></div>
+      </div>
+
+      <!-- Check-In Flow -->
+      <div class="flow-panel" id="flow-checkin">
+        <h3>✅ Daily Check-In Flow</h3>
+        <div class="flow-step"><span class="flow-step-num">1</span><div class="flow-step-content"><div class="flow-step-title">User fills values for 6 habits</div><div class="flow-step-detail">💧 Water: 8 glasses · 🏃 Exercise: ✅ Done · 😊 Mood: 7/10 · ...</div><div class="flow-step-code">updateValue(habitId, "numeric", 8)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">2</span><div class="flow-step-content"><div class="flow-step-title">Click "Save All"</div><div class="flow-step-detail">DailyCheckIn builds BulkLogCreate with entries array, calls mutateAsync</div><div class="flow-step-code">bulkCreate.mutateAsync({ log_date: "2026-09-26", entries: [...] })</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">3</span><div class="flow-step-content"><div class="flow-step-title">Axios POST /logs/bulk</div><div class="flow-step-detail">Request interceptor attaches JWT. Vite proxy forwards to FastAPI.</div><div class="flow-step-code">POST /api/v1/logs/bulk → Authorization: Bearer eyJ...</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">4</span><div class="flow-step-content"><div class="flow-step-title">LogService validates & inserts</div><div class="flow-step-detail">Check: no future dates, habit belongs to user, correct value type. Then 6× INSERT INTO habit_logs.</div><div class="flow-step-code">6× INSERT INTO habit_logs (user_id, habit_id, log_date, value_numeric, ...)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">5</span><div class="flow-step-content"><div class="flow-step-title">SQS Streak Messages</div><div class="flow-step-detail">For each logged habit, send an SQS message to trigger Lambda streak check (async, non-blocking).</div><div class="flow-step-code">sqs.send_message(QueueUrl=streak_queue, MessageBody={habit_id, user_id})</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">6</span><div class="flow-step-content"><div class="flow-step-title">TanStack Cache Invalidation</div><div class="flow-step-detail">onSuccess invalidates LOGS_KEY + ANALYTICS_KEY. Dashboard data refetches in background.</div><div class="flow-step-code">queryClient.invalidateQueries({ queryKey: ["logs"] })</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">7</span><div class="flow-step-content"><div class="flow-step-title">UI Updates</div><div class="flow-step-detail">Green borders + ✅ checkmarks appear. Button shows "Saved!" for 2 seconds. No page reload.</div><div class="flow-step-code">setSaved(true) → setTimeout(() => setSaved(false), 2000)</div></div></div>
+      </div>
+
+      <!-- AI Chat Flow -->
+      <div class="flow-panel" id="flow-aichat">
+        <h3>🤖 AI Chat — ReAct Agent Flow</h3>
+        <div class="flow-step"><span class="flow-step-num">1</span><div class="flow-step-content"><div class="flow-step-title">User: "How's my sleep this week?"</div><div class="flow-step-detail">ChatInput clears, user message appears immediately (optimistic UI). Loading spinner shows.</div><div class="flow-step-code">setMessages(prev => [...prev, userMsg]) → setIsLoading(true)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">2</span><div class="flow-step-content"><div class="flow-step-title">POST /ai/chat → AiService</div><div class="flow-step-detail">Router calls AiService.chat() → creates HealthCoachAgent with 5 tools + memory</div><div class="flow-step-code">agent = HealthCoachAgent(llm, tools=[query_logs, get_analytics, ...], memory)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">3</span><div class="flow-step-content"><div class="flow-step-title">🧠 THINK: "I should check sleep data"</div><div class="flow-step-detail">LLM receives system prompt + tools + conversation history. Returns a tool_call.</div><div class="flow-step-code">LLM → tool_call: query_logs(habit_name="Sleep", days=7)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">4</span><div class="flow-step-content"><div class="flow-step-title">🔧 ACT: Execute query_logs tool</div><div class="flow-step-detail">Agent calls the tool. SQL: SELECT value_numeric FROM habit_logs JOIN habits WHERE name='Sleep' AND log_date >= now()-7 days</div><div class="flow-step-code">→ "Mon: 7h, Tue: 6.5h, Wed: 7.5h, Thu: 8h, Fri: 6h, Sat: 7.2h"</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">5</span><div class="flow-step-content"><div class="flow-step-title">👁️ OBSERVE: LLM sees the data</div><div class="flow-step-detail">Tool result added to messages. LLM decides: enough data to answer (no more tool calls).</div><div class="flow-step-code">messages.append({role: "tool", content: "[Tool: query_logs] Mon: 7h..."})</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">6</span><div class="flow-step-content"><div class="flow-step-title">💬 ANSWER: LLM generates response</div><div class="flow-step-detail">LLM uses the data to write a personalized, friendly answer. 2 LLM calls total, ~1500 tokens.</div><div class="flow-step-code">"Your sleep averaged 7.0h this week — up from 6.5h last week! 🎉"</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">7</span><div class="flow-step-content"><div class="flow-step-title">Response appears in chat</div><div class="flow-step-detail">Assistant message added to state. ChatWindow auto-scrolls to bottom. Loading spinner hides.</div><div class="flow-step-code">setMessages(prev => [...prev, assistantMsg]) → scrollIntoView()</div></div></div>
+      </div>
+
+      <!-- Lambda Flow -->
+      <div class="flow-panel" id="flow-lambda">
+        <h3>☁️ Lambda — Streak Milestone Flow</h3>
+        <div class="flow-step"><span class="flow-step-num">1</span><div class="flow-step-content"><div class="flow-step-title">User logs a habit (from check-in)</div><div class="flow-step-detail">FastAPI sends SQS message after successful log creation. API returns 201 immediately — no waiting.</div><div class="flow-step-code">sqs.send_message(body={"user_id": "uuid-001", "habit_id": "water-uuid"})</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">2</span><div class="flow-step-content"><div class="flow-step-title">SQS delivers to Lambda 4</div><div class="flow-step-detail">AWS triggers StreakMilestoneFunction. Cold start ~500ms, warm start ~50ms.</div><div class="flow-step-code">lambda_handler(event={"Records": [{"body": "..."}]}, context)</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">3</span><div class="flow-step-content"><div class="flow-step-title">Gaps-and-Islands SQL</div><div class="flow-step-detail">Calculate current streak for this habit. Same algorithm as backend analytics — sync psycopg2 version.</div><div class="flow-step-code">WITH numbered AS (...) SELECT COUNT(*) as streak_length → 30 days</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">4</span><div class="flow-step-content"><div class="flow-step-title">Milestone Check</div><div class="flow-step-detail">30 ∈ MILESTONES [7, 14, 21, 30, 60, 90, 100, 180, 365]? → YES! Check idempotency: not already sent.</div><div class="flow-step-code">if current_streak in MILESTONES and not already_sent: → celebrate!</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">5</span><div class="flow-step-content"><div class="flow-step-title">Record + Email</div><div class="flow-step-detail">INSERT milestone into ai_insights. Send celebration email via SES.</div><div class="flow-step-code">send_email(subject="🔥 30-Day Streak on Water Intake!")</div></div></div>
+        <div class="flow-step"><span class="flow-step-num">6</span><div class="flow-step-content"><div class="flow-step-title">User receives email</div><div class="flow-step-detail">~5-10 seconds after logging. Completely async — user never waited. Total Lambda cost: $0.000001.</div><div class="flow-step-code">📧 "🔥 30-Day Streak! Incredible work, Shreya!"</div></div></div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!--  DESIGN PATTERNS                            -->
+    <!-- ════════════════════════════════════════════ -->
+    <section class="section">
+      <h2 class="section-title">Design Patterns Used</h2>
+      <div class="card-grid">
+        <div class="card fade-in delay-3">
+          <h3>🔄 Strategy Pattern</h3>
+          <p>Used 3 times: LLM providers (Ollama/Groq/OpenAI), Email providers (Console/Resend/SES), Storage (MinIO/S3). Swap implementation via one env var — zero code changes.</p>
+          <div class="chip chip-blue" style="margin-top:12px;">3 Applications</div>
+        </div>
+        <div class="card fade-in delay-4">
+          <h3>🏭 Factory Pattern</h3>
+          <p>get_llm_client() reads config, returns the correct provider. get_email_provider() does the same. One function call, correct implementation.</p>
+          <div class="chip chip-purple" style="margin-top:12px;">2 Factories</div>
+        </div>
+        <div class="card fade-in delay-5">
+          <h3>🗄️ Repository Pattern</h3>
+          <p>BaseRepository&lt;T&gt; provides CRUD. Module repos (HabitRepository, LogRepository) extend with custom queries. Business logic never writes SQL directly.</p>
+          <div class="chip chip-green" style="margin-top:12px;">5 Repositories</div>
+        </div>
+        <div class="card fade-in delay-6">
+          <h3>🔁 ReAct Agent Loop</h3>
+          <p>Think → Act → Observe → Repeat. Max 5 iterations. LLM decides which of 5 tools to call, agent executes, feeds result back. Built from scratch — no LangChain.</p>
+          <div class="chip chip-orange" style="margin-top:12px;">From Scratch</div>
+        </div>
+        <div class="card fade-in delay-7">
+          <h3>🔗 Pipeline Pattern</h3>
+          <p>Weekly report: DataCollector → Analyzer → ReportWriter. RAG: Extract → Chunk → Embed → Store. Each step produces input for the next.</p>
+          <div class="chip chip-purple" style="margin-top:12px;">2 Pipelines</div>
+        </div>
+        <div class="card fade-in delay-8">
+          <h3>💉 Dependency Injection</h3>
+          <p>FastAPI Depends() provides sessions, auth, services. Tests swap real DB with test DB via dependency_overrides. Same code, different wiring.</p>
+          <div class="chip chip-blue" style="margin-top:12px;">Every Endpoint</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Health Tracker — Architecture Overview · <a href="index.html" style="color: var(--brand-500); text-decoration:none;">← Back to all guides</a> · <a href="02-request-flow.html" style="color: var(--brand-500); text-decoration:none;">Next: Request Flow →</a></p>
+    </footer>
+
+  </div>
+
+  <!-- ── Minimal JS for flow tabs ── -->
+  <script>
+    function showFlow(name) {
+      // Hide all panels
+      document.querySelectorAll('.flow-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('active'));
+
+      // Show selected
+      document.getElementById('flow-' + name).classList.add('active');
+      event.target.closest('.flow-btn').classList.add('active');
+
+      // Re-trigger step animations
+      const panel = document.getElementById('flow-' + name);
+      panel.querySelectorAll('.flow-step').forEach((step, i) => {
+        step.style.animation = 'none';
+        step.offsetHeight; // Force reflow
+        step.style.animation = `fadeInUp 0.4s var(--ease-out) ${i * 0.05}s forwards`;
+      });
+    }
+  </script>
+</body>
+</html>

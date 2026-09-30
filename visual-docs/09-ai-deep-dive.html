@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Deep Dive — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── AI Tabs ── */
+    .ai-tabs { display:flex; gap:4px; background:var(--gray-100); padding:5px; border-radius:14px; margin:var(--space-xl) 0; overflow-x:auto; }
+    .ai-tab { padding:10px 18px; border-radius:10px; border:none; background:transparent; cursor:pointer; font-family:var(--font-sans); font-size:0.85rem; font-weight:600; color:var(--text-secondary); transition:all .3s; white-space:nowrap; display:flex; align-items:center; gap:6px; }
+    .ai-tab:hover { color:var(--text); }
+    .ai-tab.active { background:var(--bg); color:var(--text); box-shadow:var(--shadow); }
+    @media(prefers-color-scheme:dark){ .ai-tabs{background:var(--bg-secondary)} .ai-tab.active{background:var(--gray-700)} }
+    .ai-panel { display:none; animation:fadeInUp .5s var(--ease-out); }
+    .ai-panel.active { display:block; }
+
+    /* ── Provider Cards ── */
+    .provider-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:var(--space-lg) 0; }
+    .provider-card { background:var(--bg-card); border:2px solid var(--border); border-radius:14px; padding:18px; text-align:center; transition:all .3s; cursor:pointer; opacity:0; animation:scaleIn .4s var(--ease-spring) forwards; }
+    .provider-card:hover,.provider-card.selected { border-color:var(--brand-500); box-shadow:var(--shadow-glow); }
+    .provider-card.selected { background:var(--brand-50); }
+    @media(prefers-color-scheme:dark){ .provider-card.selected{background:rgba(59,130,246,.1)} }
+    .prov-icon { font-size:2.2rem; margin-bottom:6px; }
+    .prov-name { font-weight:700; font-size:1rem; }
+    .prov-detail { font-size:.78rem; color:var(--text-secondary); margin-top:4px; }
+    .prov-tag { display:inline-block; margin-top:8px; }
+    @media(max-width:768px){ .provider-grid{grid-template-columns:1fr} }
+
+    /* ── Pipeline Visual ── */
+    .pipeline-flow { display:flex; align-items:stretch; gap:0; margin:var(--space-lg) 0; overflow-x:auto; }
+    .pipe-step { flex:1; min-width:160px; background:var(--bg-card); border:1px solid var(--border); padding:16px; text-align:center; position:relative; opacity:0; animation:fadeInUp .4s var(--ease-out) forwards; }
+    .pipe-step:first-child { border-radius:12px 0 0 12px; }
+    .pipe-step:last-child { border-radius:0 12px 12px 0; }
+    .pipe-step::after { content:'→'; position:absolute; right:-14px; top:50%; transform:translateY(-50%); font-size:1.2rem; color:var(--brand-400); z-index:1; }
+    .pipe-step:last-child::after { content:''; }
+    .pipe-icon { font-size:1.6rem; margin-bottom:6px; }
+    .pipe-name { font-weight:700; font-size:.85rem; }
+    .pipe-desc { font-size:.72rem; color:var(--text-secondary); margin-top:4px; }
+    .pipe-tech { font-family:var(--font-mono); font-size:.68rem; color:var(--brand-500); margin-top:6px; }
+
+    /* ── ReAct Loop Visual ── */
+    .react-loop { max-width:700px; margin:var(--space-lg) auto; }
+    .react-step { display:flex; gap:14px; margin-bottom:12px; opacity:0; animation:fadeInUp .4s var(--ease-out) forwards; }
+    .react-marker { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; color:white; font-weight:700; }
+    .react-content { flex:1; }
+    .react-label { font-weight:700; font-size:.9rem; }
+    .react-detail { font-size:.82rem; color:var(--text-secondary); margin-top:2px; }
+    .react-code { background:#1a1b26; color:#c0caf5; border-radius:8px; padding:8px 12px; font-family:var(--font-mono); font-size:.75rem; margin-top:6px; }
+    .react-code .kw{color:#bb9af7} .react-code .fn{color:#7aa2f7} .react-code .str{color:#9ece6a} .react-code .cmt{color:#565f89}
+
+    /* ── Workflow Timeline ── */
+    .wf-steps { display:flex; gap:0; margin:var(--space-lg) 0; }
+    .wf-step { flex:1; padding:18px; background:var(--bg-card); border:1px solid var(--border); text-align:center; position:relative; opacity:0; animation:fadeInUp .5s var(--ease-out) forwards; }
+    .wf-step:first-child { border-radius:12px 0 0 12px; }
+    .wf-step:last-child { border-radius:0 12px 12px 0; }
+    .wf-step::after { content:'→'; position:absolute; right:-14px; top:50%; transform:translateY(-50%); font-size:1.3rem; color:var(--brand-400); z-index:1; }
+    .wf-step:last-child::after { content:''; }
+    .wf-icon { font-size:1.8rem; }
+    .wf-name { font-weight:700; margin-top:6px; }
+    .wf-file { font-family:var(--font-mono); font-size:.72rem; color:var(--brand-500); }
+    .wf-desc { font-size:.78rem; color:var(--text-secondary); margin-top:6px; }
+    .wf-tokens { font-family:var(--font-mono); font-size:.72rem; margin-top:8px; padding:4px 10px; background:var(--bg-secondary); border-radius:6px; display:inline-block; }
+
+    .sd1{animation-delay:.1s}.sd2{animation-delay:.2s}.sd3{animation-delay:.3s}.sd4{animation-delay:.4s}
+    .sd5{animation-delay:.5s}.sd6{animation-delay:.6s}.sd7{animation-delay:.7s}.sd8{animation-delay:.8s}
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links"><a href="08-aws-deployment.html">← AWS</a><a href="10-database-schema.html">Next: Schema →</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">09 / 10 — AI</div>
+      <h1 class="fade-in delay-1">🤖 AI <span class="gradient-text">Deep Dive</span></h1>
+      <p class="fade-in delay-2">4 AI sub-systems built from scratch (no LangChain): LLM abstraction with Strategy pattern, RAG pipeline for document Q&A, ReAct agent with 5 tools, and an agentic workflow for weekly reports. 39 files total.</p>
+    </section>
+
+    <div class="stats-bar fade-in delay-3">
+      <div class="stat"><span class="stat-value">39</span><span class="stat-label">AI Files</span></div>
+      <div class="stat"><span class="stat-value">4</span><span class="stat-label">Sub-Systems</span></div>
+      <div class="stat"><span class="stat-value">3</span><span class="stat-label">LLM Providers</span></div>
+      <div class="stat"><span class="stat-value">5</span><span class="stat-label">Agent Tools</span></div>
+      <div class="stat"><span class="stat-value">0</span><span class="stat-label">LangChain Lines</span></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ai-tabs fade-in delay-3">
+      <button class="ai-tab active" onclick="showAI('llm')">🔄 LLM Strategy</button>
+      <button class="ai-tab" onclick="showAI('rag')">📄 RAG Pipeline</button>
+      <button class="ai-tab" onclick="showAI('agent')">🧠 ReAct Agent</button>
+      <button class="ai-tab" onclick="showAI('workflow')">📊 Weekly Workflow</button>
+    </div>
+
+    <!-- ══════════ TAB 1: LLM STRATEGY ══════════ -->
+    <div class="ai-panel active" id="ai-llm">
+      <h2 style="margin-bottom:var(--space-md);">LLM Strategy Pattern — Swap Provider via Config</h2>
+      <p style="margin-bottom:var(--space-md);color:var(--text-secondary);">One abstract interface, three implementations. Change <code>LLM_PROVIDER</code> in .env — zero code changes. Click a provider:</p>
+
+      <div class="provider-grid">
+        <div class="provider-card selected sd1" onclick="selectProvider(this)">
+          <div class="prov-icon">🦙</div>
+          <div class="prov-name">Ollama</div>
+          <div class="prov-detail">Local, 100% free, offline-capable. Runs llama3.1:8b on your machine.</div>
+          <span class="prov-tag chip chip-green">Development</span>
+        </div>
+        <div class="provider-card sd2" onclick="selectProvider(this)">
+          <div class="prov-icon">⚡</div>
+          <div class="prov-name">Groq</div>
+          <div class="prov-detail">Cloud, free tier (14.4K req/day). Fastest inference — ~50ms latency.</div>
+          <span class="prov-tag chip chip-orange">Staging</span>
+        </div>
+        <div class="provider-card sd3" onclick="selectProvider(this)">
+          <div class="prov-icon">🧠</div>
+          <div class="prov-name">OpenAI</div>
+          <div class="prov-detail">GPT-4o, best quality. Pay per token. Production-grade reliability.</div>
+          <span class="prov-tag chip chip-blue">Production</span>
+        </div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:var(--space-md);">
+        <h3 style="margin-bottom:10px;">How It Works</h3>
+        <div class="react-code">
+          <span class="cmt"># config.py</span><br>
+          LLM_PROVIDER=<span class="str">"ollama"</span> <span class="cmt"># ← change this one line</span><br><br>
+          <span class="cmt"># factory.py</span><br>
+          <span class="kw">def</span> <span class="fn">get_llm_client</span>() -> BaseLLMClient:<br>
+          &nbsp;&nbsp;<span class="kw">if</span> provider == <span class="str">"ollama"</span>: <span class="kw">return</span> <span class="fn">OllamaClient</span>()<br>
+          &nbsp;&nbsp;<span class="kw">if</span> provider == <span class="str">"groq"</span>: <span class="kw">return</span> <span class="fn">GroqClient</span>()<br>
+          &nbsp;&nbsp;<span class="kw">if</span> provider == <span class="str">"openai"</span>: <span class="kw">return</span> <span class="fn">OpenAIClient</span>()<br><br>
+          <span class="cmt"># All 3 implement: chat(), stream_chat(), embed()</span><br>
+          <span class="cmt"># The rest of the app calls llm.chat() — doesn't know which provider</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ TAB 2: RAG PIPELINE ══════════ -->
+    <div class="ai-panel" id="ai-rag">
+      <h2 style="margin-bottom:var(--space-md);">RAG Pipeline — Document Q&A</h2>
+      <p style="margin-bottom:var(--space-lg);color:var(--text-secondary);">Upload a PDF → extract text → chunk → embed → store in pgvector. On query: embed question → cosine search → format top-5 chunks → LLM answers with citations.</p>
+
+      <h3>Ingestion (Upload Time)</h3>
+      <div class="pipeline-flow">
+        <div class="pipe-step sd1"><div class="pipe-icon">📄</div><div class="pipe-name">Upload PDF</div><div class="pipe-desc">User uploads via POST /ai/documents</div><div class="pipe-tech">FastAPI UploadFile</div></div>
+        <div class="pipe-step sd2"><div class="pipe-icon">📝</div><div class="pipe-name">Extract Text</div><div class="pipe-desc">PyPDF2 reads each page</div><div class="pipe-tech">document_processor.py</div></div>
+        <div class="pipe-step sd3"><div class="pipe-icon">✂️</div><div class="pipe-name">Chunk</div><div class="pipe-desc">~500 tokens, 200 overlap</div><div class="pipe-tech">chunker.py</div></div>
+        <div class="pipe-step sd4"><div class="pipe-icon">🔢</div><div class="pipe-name">Embed</div><div class="pipe-desc">Text → 768-dim vectors</div><div class="pipe-tech">embeddings.py</div></div>
+        <div class="pipe-step sd5"><div class="pipe-icon">🗄️</div><div class="pipe-name">Store</div><div class="pipe-desc">INSERT chunks + vectors into pgvector</div><div class="pipe-tech">vector_store.py</div></div>
+      </div>
+
+      <h3 style="margin-top:var(--space-xl);">Retrieval (Query Time)</h3>
+      <div class="pipeline-flow">
+        <div class="pipe-step sd3"><div class="pipe-icon">❓</div><div class="pipe-name">User Question</div><div class="pipe-desc">"What foods help sleep?"</div><div class="pipe-tech">POST /ai/chat</div></div>
+        <div class="pipe-step sd4"><div class="pipe-icon">🔢</div><div class="pipe-name">Embed Query</div><div class="pipe-desc">Question → 768-dim vector</div><div class="pipe-tech">embeddings.py</div></div>
+        <div class="pipe-step sd5"><div class="pipe-icon">🔍</div><div class="pipe-name">Cosine Search</div><div class="pipe-desc">ORDER BY embedding &lt;=&gt; query LIMIT 5</div><div class="pipe-tech">vector_store.py (pgvector)</div></div>
+        <div class="pipe-step sd6"><div class="pipe-icon">📋</div><div class="pipe-name">Format</div><div class="pipe-desc">Top-5 chunks with page citations</div><div class="pipe-tech">retriever.py</div></div>
+        <div class="pipe-step sd7"><div class="pipe-icon">💬</div><div class="pipe-name">LLM Answer</div><div class="pipe-desc">"Based on your Sleep Guide (p.3)..."</div><div class="pipe-tech">BaseLLMClient.chat()</div></div>
+      </div>
+    </div>
+
+    <!-- ══════════ TAB 3: REACT AGENT ══════════ -->
+    <div class="ai-panel" id="ai-agent">
+      <h2 style="margin-bottom:var(--space-md);">ReAct Agent — Think → Act → Observe</h2>
+      <p style="margin-bottom:var(--space-lg);color:var(--text-secondary);">The agent receives a question, reasons about what data it needs, calls tools to fetch data, observes results, and generates a personalized answer. Max 5 iterations.</p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:var(--space-lg);">
+        <span class="chip chip-blue">🔍 query_logs</span>
+        <span class="chip chip-green">📊 get_analytics</span>
+        <span class="chip chip-purple">🔗 correlate</span>
+        <span class="chip chip-orange">📄 search_docs</span>
+        <span class="chip chip-red">📝 create_plan</span>
+      </div>
+
+      <h3 style="margin-bottom:var(--space-md);">Example: "Why am I tired this week?"</h3>
+      <div class="react-loop">
+        <div class="react-step sd1">
+          <div class="react-marker" style="background:var(--brand-500);">💭</div>
+          <div class="react-content">
+            <div class="react-label">THINK #1</div>
+            <div class="react-detail">"I should check sleep data for this week"</div>
+          </div>
+        </div>
+        <div class="react-step sd2">
+          <div class="react-marker" style="background:var(--orange);">🔧</div>
+          <div class="react-content">
+            <div class="react-label">ACT #1 → query_logs</div>
+            <div class="react-code"><span class="fn">query_logs</span>(habit_name=<span class="str">"Sleep"</span>, days=<span class="str">7</span>)</div>
+          </div>
+        </div>
+        <div class="react-step sd3">
+          <div class="react-marker" style="background:var(--green);">👁️</div>
+          <div class="react-content">
+            <div class="react-label">OBSERVE</div>
+            <div class="react-detail">"Mon: 5h, Tue: 4.5h, Wed: 6h, Thu: 5h, Fri: 4h, Sat: 5.5h — avg: 5.0h"</div>
+          </div>
+        </div>
+        <div class="react-step sd4">
+          <div class="react-marker" style="background:var(--brand-500);">💭</div>
+          <div class="react-content">
+            <div class="react-label">THINK #2</div>
+            <div class="react-detail">"Sleep is very low (5h vs target 7.5h). Let me check if exercise correlates."</div>
+          </div>
+        </div>
+        <div class="react-step sd5">
+          <div class="react-marker" style="background:var(--orange);">🔧</div>
+          <div class="react-content">
+            <div class="react-label">ACT #2 → correlate</div>
+            <div class="react-code"><span class="fn">correlate</span>(habit_a=<span class="str">"Sleep"</span>, habit_b=<span class="str">"Exercise"</span>)</div>
+          </div>
+        </div>
+        <div class="react-step sd6">
+          <div class="react-marker" style="background:var(--green);">👁️</div>
+          <div class="react-content">
+            <div class="react-label">OBSERVE</div>
+            <div class="react-detail">"Correlation: 0.78 (strong positive). On days you exercise, you sleep 1.5h more."</div>
+          </div>
+        </div>
+        <div class="react-step sd7">
+          <div class="react-marker" style="background:var(--brand-500);">💭</div>
+          <div class="react-content">
+            <div class="react-label">THINK #3</div>
+            <div class="react-detail">"I have enough data. Low sleep + strong exercise correlation = clear answer."</div>
+          </div>
+        </div>
+        <div class="react-step sd8">
+          <div class="react-marker" style="background:var(--purple);">💬</div>
+          <div class="react-content">
+            <div class="react-label">FINAL ANSWER</div>
+            <div class="react-detail" style="color:var(--text);font-weight:500;">"You're averaging only 5 hours of sleep this week — well below your 7.5h target. I found a strong correlation (0.78) between exercise and sleep: on days you work out, you sleep ~1.5 hours more. You only exercised twice this week. Try adding 3 more exercise sessions and you'll likely see your sleep improve significantly. 💪"</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:.82rem;color:var(--text-muted);">2 tool calls · 3 think steps · ~1500 tokens · ~3 seconds</div>
+    </div>
+
+    <!-- ══════════ TAB 4: WEEKLY WORKFLOW ══════════ -->
+    <div class="ai-panel" id="ai-workflow">
+      <h2 style="margin-bottom:var(--space-md);">Weekly Report Workflow — 3-Step Pipeline</h2>
+      <p style="margin-bottom:var(--space-lg);color:var(--text-secondary);">Orchestrated by WorkflowOrchestrator with retry logic. Each step produces input for the next. Total: 2 LLM calls, ~3000 tokens, ~15 seconds.</p>
+
+      <div class="wf-steps">
+        <div class="wf-step sd2" style="border-top:4px solid var(--brand-500);">
+          <div class="wf-icon">📊</div>
+          <div class="wf-name">Step 1: Collect</div>
+          <div class="wf-file">data_collector.py</div>
+          <div class="wf-desc">Query DB: habits, logs, streaks, weekly comparison. No LLM — pure SQL.</div>
+          <div class="wf-tokens">0 tokens · ~100ms</div>
+        </div>
+        <div class="wf-step sd4" style="border-top:4px solid var(--purple);">
+          <div class="wf-icon">🔬</div>
+          <div class="wf-name">Step 2: Analyze</div>
+          <div class="wf-file">analyzer.py</div>
+          <div class="wf-desc">LLM identifies patterns, improvements, concerns. Temperature 0.4 (factual).</div>
+          <div class="wf-tokens">~1300 tokens · ~5s</div>
+        </div>
+        <div class="wf-step sd6" style="border-top:4px solid var(--green);">
+          <div class="wf-icon">✍️</div>
+          <div class="wf-name">Step 3: Write</div>
+          <div class="wf-file">report_writer.py</div>
+          <div class="wf-desc">LLM writes friendly personalized report using data + analysis. Temperature 0.6 (creative).</div>
+          <div class="wf-tokens">~1700 tokens · ~8s</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:var(--space-lg);">
+        <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:var(--green-light);border:2px solid var(--green);border-radius:12px;font-weight:700;color:#065F46;">
+          <span style="font-size:1.3rem;">✅</span> Report saved to ai_insights + emailed to user
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p><a href="08-aws-deployment.html" style="color:var(--brand-500);text-decoration:none;">← AWS</a> · AI Deep Dive · <a href="10-database-schema.html" style="color:var(--brand-500);text-decoration:none;">Database Schema →</a></p>
+    </footer>
+  </div>
+
+  <script>
+    function showAI(name) {
+      document.querySelectorAll('.ai-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('ai-' + name).classList.add('active');
+      event.target.closest('.ai-tab').classList.add('active');
+    }
+    function selectProvider(el) {
+      document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+  </script>
+</body>
+</html>

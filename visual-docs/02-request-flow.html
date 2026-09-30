@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Flow — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── Vertical Flow Timeline ── */
+    .flow-timeline {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+      padding-left: 60px;
+    }
+    .flow-timeline::before {
+      content: '';
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom,
+        var(--cyan),
+        var(--brand-500),
+        var(--green),
+        var(--brand-600),
+        var(--purple),
+        var(--green)
+      );
+      border-radius: 2px;
+    }
+
+    /* ── Each Layer ── */
+    .layer {
+      position: relative;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: translateX(-15px);
+    }
+    .layer.visible {
+      animation: layerSlide 0.5s var(--ease-out) forwards;
+    }
+    @keyframes layerSlide {
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .layer-dot {
+      position: absolute;
+      left: -44px;
+      top: 16px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid var(--bg);
+      z-index: 2;
+    }
+    .layer-dot.active {
+      animation: dotPop 0.4s var(--ease-spring);
+      box-shadow: 0 0 12px currentColor;
+    }
+    @keyframes dotPop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    .layer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      transition: all 0.3s;
+      border-left: 4px solid transparent;
+    }
+    .layer-card.active {
+      border-color: var(--brand-400);
+      border-left-color: var(--brand-500);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .layer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .layer-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .layer-name .num {
+      background: var(--gray-100);
+      color: var(--gray-600);
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .layer-name .title { font-weight: 600; font-size: 0.95rem; }
+    .layer-tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 50px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .layer-body { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+    .layer-code {
+      background: #1a1b26;
+      color: #c0caf5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      margin-top: 8px;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    .layer-code .kw { color: #bb9af7; }
+    .layer-code .fn { color: #7aa2f7; }
+    .layer-code .str { color: #9ece6a; }
+    .layer-code .cmt { color: #565f89; }
+    .layer-code .num { color: #ff9e64; background: none; width: auto; height: auto; display: inline; font-size: inherit; }
+
+    .layer-timing {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── Color themes per layer group ── */
+    .dot-frontend { background: var(--cyan); color: var(--cyan); }
+    .dot-nginx { background: var(--green); color: var(--green); }
+    .dot-middleware { background: var(--orange); color: var(--orange); }
+    .dot-fastapi { background: var(--brand-500); color: var(--brand-500); }
+    .dot-service { background: var(--brand-600); color: var(--brand-600); }
+    .dot-db { background: var(--purple); color: var(--purple); }
+    .dot-response { background: var(--green); color: var(--green); }
+
+    .tag-frontend { background: rgba(6,182,212,0.1); color: var(--cyan); }
+    .tag-nginx { background: var(--green-light); color: #065F46; }
+    .tag-middleware { background: var(--orange-light); color: #92400E; }
+    .tag-fastapi { background: var(--brand-50); color: var(--brand-700); }
+    .tag-service { background: rgba(37,99,235,0.1); color: var(--brand-600); }
+    .tag-db { background: var(--purple-light); color: #5B21B6; }
+    .tag-response { background: var(--green-light); color: #065F46; }
+    @media (prefers-color-scheme: dark) {
+      .tag-frontend, .tag-nginx, .tag-middleware, .tag-fastapi, .tag-service, .tag-db, .tag-response {
+        background: rgba(255,255,255,0.05);
+      }
+    }
+
+    /* ── Play Controls ── */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: var(--space-xl) 0;
+    }
+    .ctrl-btn {
+      padding: 10px 24px;
+      border: 2px solid var(--brand-500);
+      border-radius: 12px;
+      background: var(--brand-500);
+      color: white;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ctrl-btn:hover { background: var(--brand-600); transform: translateY(-1px); }
+    .ctrl-btn.outline { background: transparent; color: var(--brand-500); }
+    .ctrl-btn.outline:hover { background: var(--brand-50); }
+
+    /* ── Summary Cards ── */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: var(--space-xl) 0;
+    }
+    .summary-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .summary-card .sc-icon { font-size: 1.5rem; }
+    .summary-card .sc-value { font-size: 1.4rem; font-weight: 800; margin: 4px 0; }
+    .summary-card .sc-label { font-size: 0.75rem; color: var(--text-muted); }
+    @media (max-width: 768px) { .summary-row { grid-template-columns: repeat(2, 1fr); } }
+
+    /* ── Traveling dot ── */
+    .travel-dot {
+      position: absolute;
+      left: 19px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--brand-400);
+      box-shadow: 0 0 16px var(--brand-400);
+      z-index: 3;
+      opacity: 0;
+      transition: top 0.6s var(--ease-out), opacity 0.3s;
+    }
+    .travel-dot.active { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="container page">
+
+    <!-- Nav -->
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links">
+        <a href="01-architecture-overview.html">← Architecture</a>
+        <a href="03-dev-setup.html">Next: Dev Setup →</a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="badge fade-in">02 / 10 — Request Flow</div>
+      <h1 class="fade-in delay-1">🔀 Request <span class="gradient-text">Lifecycle</span></h1>
+      <p class="fade-in delay-2">One POST /api/v1/logs/bulk request traced through 15 layers — from the user clicking "Save All" to the database INSERT and back to the green checkmark.</p>
+    </section>
+
+    <!-- Summary -->
+    <div class="summary-row fade-in delay-3">
+      <div class="summary-card">
+        <div class="sc-icon">🖱️</div>
+        <div class="sc-value" style="color: var(--cyan);">Click</div>
+        <div class="sc-label">User Action</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-icon">📡</div>
+        <div class="sc-value" style="color: var(--brand-500);">15</div>
+        <div class="sc-label">Layers Traversed</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-icon">🗄️</div>
+        <div class="sc-value" style="color: var(--purple);">6</div>
+        <div class="sc-label">DB Inserts</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-icon">⏱️</div>
+        <div class="sc-value" style="color: var(--green);">~300ms</div>
+        <div class="sc-label">Total Time</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls fade-in delay-4">
+      <button class="ctrl-btn" onclick="playFlow()">▶ Play Animation</button>
+      <button class="ctrl-btn outline" onclick="showAll()">Show All Steps</button>
+      <button class="ctrl-btn outline" onclick="resetFlow()">↺ Reset</button>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!--  15-LAYER REQUEST FLOW                      -->
+    <!-- ════════════════════════════════════════════ -->
+    <div class="flow-timeline" id="timeline">
+      <div class="travel-dot" id="travelDot"></div>
+
+      <!-- Layer 1: Browser Click -->
+      <div class="layer" data-layer="1">
+        <div class="layer-dot dot-frontend"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">1</span><span class="title">User clicks "Save All"</span></div>
+            <span class="layer-tag tag-frontend">Frontend</span>
+          </div>
+          <div class="layer-body">CheckInPage.tsx — user filled Water: 8, Exercise: ✅, Mood: 7/10 for today.</div>
+          <div class="layer-code"><span class="cmt">// DailyCheckIn.tsx → handleSave()</span><br><span class="kw">await</span> <span class="fn">onSave</span>({ log_date: <span class="str">"2026-09-26"</span>, entries: [<span class="num">6 habits</span>] });</div>
+          <div class="layer-timing">⏱ 0ms — user action</div>
+        </div>
+      </div>
+
+      <!-- Layer 2: TanStack Mutation -->
+      <div class="layer" data-layer="2">
+        <div class="layer-dot dot-frontend"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">2</span><span class="title">TanStack Query — useBulkCreateLogs</span></div>
+            <span class="layer-tag tag-frontend">Frontend</span>
+          </div>
+          <div class="layer-body">useMutation calls logService.bulkCreateLogs(data) which calls axios.</div>
+          <div class="layer-code"><span class="fn">bulkCreate</span>.<span class="fn">mutateAsync</span>(data)<br><span class="cmt">// → logService.bulkCreateLogs(data)</span><br><span class="cmt">// → api.post("/logs/bulk", data)</span></div>
+          <div class="layer-timing">⏱ +1ms — function call chain</div>
+        </div>
+      </div>
+
+      <!-- Layer 3: Axios Interceptor -->
+      <div class="layer" data-layer="3">
+        <div class="layer-dot dot-frontend"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">3</span><span class="title">Axios Request Interceptor</span></div>
+            <span class="layer-tag tag-frontend">Frontend</span>
+          </div>
+          <div class="layer-body">Reads JWT from localStorage, attaches to Authorization header automatically.</div>
+          <div class="layer-code">config.headers.<span class="fn">Authorization</span> = <span class="str">`Bearer ${token}`</span>;<br><span class="cmt">// Every request gets this — you never write it manually</span></div>
+          <div class="layer-timing">⏱ +1ms — header injection</div>
+        </div>
+      </div>
+
+      <!-- Layer 4: Vite Proxy -->
+      <div class="layer" data-layer="4">
+        <div class="layer-dot dot-frontend"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">4</span><span class="title">Vite Dev Proxy</span></div>
+            <span class="layer-tag tag-frontend">Proxy</span>
+          </div>
+          <div class="layer-body">In dev: :3000/api/* → :8000/api/* (avoids CORS). In production: Nginx does this.</div>
+          <div class="layer-code"><span class="cmt">// vite.config.ts</span><br>proxy: { <span class="str">"/api"</span>: { target: <span class="str">"http://localhost:8000"</span> } }</div>
+          <div class="layer-timing">⏱ +2ms — proxy forward</div>
+        </div>
+      </div>
+
+      <!-- Layer 5: Nginx -->
+      <div class="layer" data-layer="5">
+        <div class="layer-dot dot-nginx"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">5</span><span class="title">Nginx Rate Limit Check</span></div>
+            <span class="layer-tag tag-nginx">Nginx</span>
+          </div>
+          <div class="layer-body">General API limit: 30 req/s per IP. Client is under limit → PASS. Adds proxy headers.</div>
+          <div class="layer-code"><span class="fn">limit_req</span> zone=api_limit burst=<span class="num">20</span> nodelay; <span class="cmt">→ PASS ✅</span><br><span class="fn">proxy_set_header</span> X-Real-IP $remote_addr;<br><span class="fn">proxy_pass</span> http://backend;</div>
+          <div class="layer-timing">⏱ +3ms — rate check + proxy</div>
+        </div>
+      </div>
+
+      <!-- Layer 6: Logging Middleware -->
+      <div class="layer" data-layer="6">
+        <div class="layer-dot dot-middleware"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">6</span><span class="title">LoggingMiddleware</span></div>
+            <span class="layer-tag tag-middleware">Middleware</span>
+          </div>
+          <div class="layer-body">Generates unique request_id, starts timer. Will log method, path, status, duration on response.</div>
+          <div class="layer-code">request_id = <span class="fn">uuid4</span>().<span class="fn">hex</span>[:<span class="num">8</span>]<br>start_time = <span class="fn">time.perf_counter</span>()<br><span class="cmt">// → passes request to next middleware</span></div>
+          <div class="layer-timing">⏱ +4ms — ID + timer start</div>
+        </div>
+      </div>
+
+      <!-- Layer 7: Rate Limiter Middleware -->
+      <div class="layer" data-layer="7">
+        <div class="layer-dot dot-middleware"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">7</span><span class="title">RateLimiterMiddleware</span></div>
+            <span class="layer-tag tag-middleware">Middleware</span>
+          </div>
+          <div class="layer-body">Redis sliding window check: INCR key, check count vs limit. /logs = general tier (60/min).</div>
+          <div class="layer-code"><span class="kw">await</span> redis.<span class="fn">incr</span>(<span class="str">"rate:192.168.1.1:/api/v1/logs"</span>)<br><span class="cmt">// count=5, limit=60 → PASS ✅</span></div>
+          <div class="layer-timing">⏱ +5ms — Redis round-trip ~1ms</div>
+        </div>
+      </div>
+
+      <!-- Layer 8: FastAPI Router -->
+      <div class="layer" data-layer="8">
+        <div class="layer-dot dot-fastapi"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">8</span><span class="title">FastAPI Router — logs/router.py</span></div>
+            <span class="layer-tag tag-fastapi">Router</span>
+          </div>
+          <div class="layer-body">URL match: POST /api/v1/logs/bulk → bulk_create_logs(). Dependency injection resolves parameters.</div>
+          <div class="layer-code">@router.<span class="fn">post</span>(<span class="str">"/bulk"</span>, status_code=<span class="num">201</span>)<br><span class="kw">async def</span> <span class="fn">bulk_create_logs</span>(<br>    data: BulkLogCreate,<br>    user_id: UUID = <span class="fn">Depends</span>(get_current_user_id),<br>    service: LogService = <span class="fn">Depends</span>(get_log_service),<br>):</div>
+          <div class="layer-timing">⏱ +8ms — URL routing + DI resolution</div>
+        </div>
+      </div>
+
+      <!-- Layer 9: Auth Dependency -->
+      <div class="layer" data-layer="9">
+        <div class="layer-dot dot-fastapi"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">9</span><span class="title">JWT Decode — get_current_user_id</span></div>
+            <span class="layer-tag tag-fastapi">Auth</span>
+          </div>
+          <div class="layer-body">Extract token from header → decode with SECRET_KEY → verify not expired → verify type="access" → return user_id.</div>
+          <div class="layer-code">token = request.headers[<span class="str">"Authorization"</span>].split(<span class="str">" "</span>)[<span class="num">1</span>]<br>payload = <span class="fn">decode_token</span>(token, expected_type=<span class="str">"access"</span>)<br>user_id = payload[<span class="str">"sub"</span>] <span class="cmt">// → "uuid-shreya-001"</span></div>
+          <div class="layer-timing">⏱ +10ms — JWT decode ~2ms</div>
+        </div>
+      </div>
+
+      <!-- Layer 10: Pydantic Validation -->
+      <div class="layer" data-layer="10">
+        <div class="layer-dot dot-service"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">10</span><span class="title">Pydantic Validation — BulkLogCreate</span></div>
+            <span class="layer-tag tag-service">Validation</span>
+          </div>
+          <div class="layer-body">Request body parsed and validated: log_date must be ≤ today, entries array must be non-empty, each entry needs matching value type.</div>
+          <div class="layer-code"><span class="kw">class</span> <span class="fn">BulkLogCreate</span>(BaseModel):<br>    log_date: date  <span class="cmt"># validated: not future</span><br>    entries: list[BulkLogEntry]  <span class="cmt"># min_length=1</span></div>
+          <div class="layer-timing">⏱ +12ms — schema validation</div>
+        </div>
+      </div>
+
+      <!-- Layer 11: Service -->
+      <div class="layer" data-layer="11">
+        <div class="layer-dot dot-service"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">11</span><span class="title">LogService.bulk_create_logs()</span></div>
+            <span class="layer-tag tag-service">Service</span>
+          </div>
+          <div class="layer-body">Business logic: verify each habit_id belongs to user, check value matches habit_type (numeric gets value_numeric, etc.), loop and create.</div>
+          <div class="layer-code"><span class="kw">for</span> entry <span class="kw">in</span> data.entries:<br>    habit = <span class="kw">await</span> habit_repo.<span class="fn">get_user_habit</span>(user_id, entry.habit_id)<br>    <span class="cmt">// Validate ownership + type match</span><br>    log = <span class="kw">await</span> log_repo.<span class="fn">create</span>(HabitLog(...))</div>
+          <div class="layer-timing">⏱ +20ms — validation + object creation</div>
+        </div>
+      </div>
+
+      <!-- Layer 12: Repository -->
+      <div class="layer" data-layer="12">
+        <div class="layer-dot dot-db"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">12</span><span class="title">LogRepository → SQLAlchemy → PostgreSQL</span></div>
+            <span class="layer-tag tag-db">Database</span>
+          </div>
+          <div class="layer-body">6× session.add(HabitLog) → session.commit() → PostgreSQL executes 6 INSERT statements in one transaction.</div>
+          <div class="layer-code"><span class="cmt">-- Generated SQL (6 times):</span><br><span class="kw">INSERT INTO</span> habit_logs<br>  (id, user_id, habit_id, log_date, value_numeric, created_at)<br><span class="kw">VALUES</span> (<span class="str">'uuid'</span>, <span class="str">'uuid-shreya'</span>, <span class="str">'uuid-water'</span>, <span class="str">'2026-09-26'</span>, <span class="num">8.0</span>, <span class="fn">now</span>());</div>
+          <div class="layer-timing">⏱ +80ms — 6 inserts + commit (~10ms each)</div>
+        </div>
+      </div>
+
+      <!-- Layer 13: SQS -->
+      <div class="layer" data-layer="13">
+        <div class="layer-dot dot-service"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">13</span><span class="title">SQS — Streak Check Messages (async)</span></div>
+            <span class="layer-tag tag-service">Event</span>
+          </div>
+          <div class="layer-body">For each logged habit, send a message to the streak SQS queue. Non-blocking — API doesn't wait for Lambda to process.</div>
+          <div class="layer-code">sqs.<span class="fn">send_message</span>(<br>    QueueUrl=streak_queue,<br>    MessageBody=json.<span class="fn">dumps</span>({<span class="str">"user_id"</span>: <span class="str">"..."</span>, <span class="str">"habit_id"</span>: <span class="str">"..."</span>})<br>) <span class="cmt">// fire and forget</span></div>
+          <div class="layer-timing">⏱ +85ms — SQS send ~5ms (async)</div>
+        </div>
+      </div>
+
+      <!-- Layer 14: JSON Response -->
+      <div class="layer" data-layer="14">
+        <div class="layer-dot dot-response"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">14</span><span class="title">201 Created → JSON Response</span></div>
+            <span class="layer-tag tag-response">Response</span>
+          </div>
+          <div class="layer-body">FastAPI serializes 6 HabitLog objects → JSON array. Gzip compressed by Nginx (1.2KB → 400 bytes). Logging middleware logs: POST /logs/bulk 201 285ms.</div>
+          <div class="layer-code">[<br>  { <span class="str">"id"</span>: <span class="str">"uuid"</span>, <span class="str">"habit_id"</span>: <span class="str">"water-uuid"</span>, <span class="str">"value_numeric"</span>: <span class="num">8.0</span>, ... },<br>  { <span class="str">"id"</span>: <span class="str">"uuid"</span>, <span class="str">"habit_id"</span>: <span class="str">"exercise-uuid"</span>, <span class="str">"value_boolean"</span>: <span class="kw">true</span>, ... },<br>  <span class="cmt">// ... 4 more</span><br>]</div>
+          <div class="layer-timing">⏱ +285ms — total backend time</div>
+        </div>
+      </div>
+
+      <!-- Layer 15: UI Update -->
+      <div class="layer" data-layer="15">
+        <div class="layer-dot dot-frontend"></div>
+        <div class="layer-card">
+          <div class="layer-header">
+            <div class="layer-name"><span class="num">15</span><span class="title">TanStack Cache Invalidation + UI Update</span></div>
+            <span class="layer-tag tag-response">Frontend</span>
+          </div>
+          <div class="layer-body">onSuccess: invalidate logs cache + analytics cache. Green checkmarks appear. "Saved!" shows for 2 seconds. Dashboard data refreshes in background.</div>
+          <div class="layer-code">queryClient.<span class="fn">invalidateQueries</span>({ queryKey: [<span class="str">"logs"</span>] });<br>queryClient.<span class="fn">invalidateQueries</span>({ queryKey: [<span class="str">"analytics"</span>] });<br><span class="fn">setSaved</span>(<span class="kw">true</span>); <span class="cmt">// ✅ green checkmarks appear</span></div>
+          <div class="layer-timing">⏱ +300ms — total round-trip. User sees ✅</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Summary -->
+    <section class="section" style="text-align: center;">
+      <h2>What Just Happened</h2>
+      <p style="max-width: 600px; margin: var(--space-md) auto;">In 300 milliseconds, the request passed through 15 layers: React component → TanStack mutation → Axios interceptor → Vite proxy → Nginx rate limiter → 2 middleware layers → FastAPI router → JWT auth → Pydantic validation → Service logic → Repository → PostgreSQL (6 INSERTs) → SQS event → JSON response → UI update. The user only saw: click → green checkmarks.</p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p><a href="01-architecture-overview.html" style="color: var(--brand-500); text-decoration:none;">← Architecture</a> · Request Flow · <a href="03-dev-setup.html" style="color: var(--brand-500); text-decoration:none;">Dev Setup →</a></p>
+    </footer>
+  </div>
+
+  <!-- ── Animation JS ── -->
+  <script>
+    const layers = document.querySelectorAll('.layer');
+    const dot = document.getElementById('travelDot');
+    let playing = false;
+    let timer = null;
+
+    function playFlow() {
+      if (playing) return;
+      playing = true;
+      resetFlow();
+
+      let i = 0;
+      timer = setInterval(() => {
+        if (i >= layers.length) {
+          clearInterval(timer);
+          playing = false;
+          dot.classList.remove('active');
+          return;
+        }
+
+        const layer = layers[i];
+        layer.classList.add('visible');
+        layer.querySelector('.layer-card').classList.add('active');
+        layer.querySelector('.layer-dot').classList.add('active');
+
+        // Move traveling dot
+        const rect = layer.getBoundingClientRect();
+        const timelineRect = document.getElementById('timeline').getBoundingClientRect();
+        dot.style.top = (rect.top - timelineRect.top + 16) + 'px';
+        dot.classList.add('active');
+
+        // Remove active highlight from previous
+        if (i > 0) {
+          layers[i-1].querySelector('.layer-card').classList.remove('active');
+        }
+
+        i++;
+      }, 600);
+    }
+
+    function showAll() {
+      if (timer) clearInterval(timer);
+      playing = false;
+      dot.classList.remove('active');
+      layers.forEach(l => {
+        l.classList.add('visible');
+        l.querySelector('.layer-card').classList.remove('active');
+        l.querySelector('.layer-dot').classList.add('active');
+      });
+    }
+
+    function resetFlow() {
+      if (timer) clearInterval(timer);
+      playing = false;
+      dot.classList.remove('active');
+      layers.forEach(l => {
+        l.classList.remove('visible');
+        l.querySelector('.layer-card').classList.remove('active');
+        l.querySelector('.layer-dot').classList.remove('active');
+      });
+    }
+
+    // Auto-play on scroll into view
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !playing) {
+        setTimeout(playFlow, 500);
+        observer.disconnect();
+      }
+    }, { threshold: 0.2 });
+    observer.observe(document.getElementById('timeline'));
+  </script>
+</body>
+</html>

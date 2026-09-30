@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker Services — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    .docker-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px; margin: var(--space-xl) 0;
+    }
+    .docker-svc {
+      background: var(--bg-card); border: 2px solid var(--border); border-radius: 14px;
+      padding: 18px; position: relative; overflow: hidden;
+      opacity: 0; transform: scale(0.9);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .docker-svc.visible { animation: scaleIn 0.5s var(--ease-spring) forwards; }
+    .docker-svc:hover { border-color: var(--brand-400); box-shadow: var(--shadow-glow); }
+
+    .svc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .svc-icon { font-size: 1.6rem; }
+    .svc-name { font-weight: 700; font-size: 1rem; }
+    .svc-image { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .svc-status {
+      display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600;
+      margin: 10px 0; padding: 6px 10px; border-radius: 8px;
+    }
+    .svc-status.healthy { background: var(--green-light); color: #065F46; }
+    .svc-status .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s ease infinite; }
+    @media (prefers-color-scheme: dark) { .svc-status.healthy { background: rgba(16,185,129,0.15); color: var(--green); } }
+
+    .svc-details { font-size: 0.8rem; color: var(--text-secondary); }
+    .svc-detail-row { display: flex; justify-content: space-between; padding: 3px 0; }
+    .svc-detail-label { color: var(--text-muted); }
+    .svc-detail-val { font-family: var(--font-mono); font-weight: 500; }
+
+    .svc-deps {
+      margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);
+      font-size: 0.72rem; color: var(--text-muted);
+    }
+
+    /* ── Startup Order Animation ── */
+    .startup-timeline {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      flex-wrap: wrap; margin: var(--space-xl) 0; padding: 20px;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+    }
+    .st-step {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      opacity: 0; animation: scaleIn 0.4s var(--ease-spring) forwards;
+    }
+    .st-box {
+      width: 70px; height: 70px; border-radius: 12px; display: flex;
+      align-items: center; justify-content: center; font-size: 1.6rem;
+      border: 2px solid var(--border); background: var(--bg-card);
+      transition: all 0.5s;
+    }
+    .st-box.on { border-color: var(--green); box-shadow: 0 0 14px rgba(16,185,129,0.3); }
+    .st-label { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); }
+    .st-arrow { font-size: 1.2rem; color: var(--brand-400); animation: arrowSlide 1.5s ease infinite; margin-top: -20px; }
+    @keyframes arrowSlide { 0%,100%{transform:translateX(0);opacity:.5} 50%{transform:translateX(3px);opacity:1} }
+
+    /* ── Compose File Tabs ── */
+    .compose-tabs { display: flex; gap: 4px; margin-bottom: -1px; position: relative; z-index: 1; }
+    .compose-tab {
+      padding: 8px 16px; border: 1px solid var(--border); border-bottom: none;
+      border-radius: 10px 10px 0 0; background: var(--bg-secondary); cursor: pointer;
+      font-family: var(--font-sans); font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .compose-tab.active { background: var(--bg-card); color: var(--text); border-bottom-color: var(--bg-card); }
+    .compose-panel {
+      display: none; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 0 12px 12px 12px; padding: 16px;
+    }
+    .compose-panel.active { display: block; }
+    .compose-info { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; }
+    .compose-services { display: flex; flex-wrap: wrap; gap: 8px; }
+    .compose-svc-chip {
+      padding: 6px 12px; border-radius: 8px; background: var(--bg-secondary);
+      border: 1px solid var(--border); font-size: 0.78rem; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links"><a href="05-testing-flow.html">← Testing</a><a href="07-cicd-pipeline.html">Next: CI/CD →</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">06 / 10 — Docker</div>
+      <h1 class="fade-in delay-1">🐳 Docker <span class="gradient-text">Services</span></h1>
+      <p class="fade-in delay-2">8 containers orchestrated with Docker Compose. Health checks ensure correct startup order. Multi-stage Dockerfile produces a 150MB production image.</p>
+    </section>
+
+    <!-- Stats -->
+    <div class="stats-bar fade-in delay-3">
+      <div class="stat"><span class="stat-value">8</span><span class="stat-label">Services</span></div>
+      <div class="stat"><span class="stat-value">3</span><span class="stat-label">Compose Files</span></div>
+      <div class="stat"><span class="stat-value">150MB</span><span class="stat-label">Prod Image</span></div>
+      <div class="stat"><span class="stat-value">16</span><span class="stat-label">Make Targets</span></div>
+    </div>
+
+    <!-- ══════════ STARTUP ORDER ══════════ -->
+    <section class="section">
+      <h2 class="section-title fade-in delay-3">Startup Order</h2>
+      <p style="text-align:center;margin-bottom:var(--space-md);color:var(--text-secondary);">Containers start in dependency order. Backend waits for PostgreSQL + Redis health checks.</p>
+
+      <div class="startup-timeline fade-in delay-4" id="startupTimeline">
+        <div class="st-step" style="animation-delay:.2s"><div class="st-box" id="st-pg">🐘</div><div class="st-label">PostgreSQL</div></div>
+        <div class="st-step" style="animation-delay:.2s"><div class="st-box" id="st-redis">🔴</div><div class="st-label">Redis</div></div>
+        <span class="st-arrow" style="animation-delay:.4s">→</span>
+        <div class="st-step" style="animation-delay:.5s"><div class="st-box" id="st-minio">📦</div><div class="st-label">MinIO</div></div>
+        <div class="st-step" style="animation-delay:.5s"><div class="st-box" id="st-ollama">🧠</div><div class="st-label">Ollama</div></div>
+        <span class="st-arrow" style="animation-delay:.7s">→</span>
+        <div class="st-step" style="animation-delay:.8s"><div class="st-box" id="st-backend">⚡</div><div class="st-label">Backend</div></div>
+        <div class="st-step" style="animation-delay:.8s"><div class="st-box" id="st-celery">⏳</div><div class="st-label">Celery</div></div>
+        <span class="st-arrow" style="animation-delay:1s">→</span>
+        <div class="st-step" style="animation-delay:1.1s"><div class="st-box" id="st-nginx">🌐</div><div class="st-label">Nginx</div></div>
+      </div>
+    </section>
+
+    <!-- ══════════ SERVICE CARDS ══════════ -->
+    <section class="section">
+      <h2 class="section-title">All 8 Services</h2>
+      <div class="docker-grid" id="svcGrid">
+
+        <div class="docker-svc" data-delay="0.1" style="border-left-color: var(--purple);">
+          <div class="svc-header"><span class="svc-icon">🐘</span><div><div class="svc-name">PostgreSQL + pgvector</div><div class="svc-image">pgvector/pgvector:pg16</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Port</span><span class="svc-detail-val">5432</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Volume</span><span class="svc-detail-val">postgres_data</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Tables</span><span class="svc-detail-val">8 + pgvector ext</span></div>
+          </div>
+          <div class="svc-deps">Depends on: nothing (starts first)</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.2" style="border-left-color: var(--red);">
+          <div class="svc-header"><span class="svc-icon">🔴</span><div><div class="svc-name">Redis</div><div class="svc-image">redis:7-alpine</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Port</span><span class="svc-detail-val">6379</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Max Memory</span><span class="svc-detail-val">128 MB (LRU)</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Uses</span><span class="svc-detail-val">Cache · Broker · Rate</span></div>
+          </div>
+          <div class="svc-deps">Depends on: nothing (starts first)</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.3" style="border-left-color: var(--brand-500);">
+          <div class="svc-header"><span class="svc-icon">⚡</span><div><div class="svc-name">Backend (FastAPI)</div><div class="svc-image">python:3.11-slim (multi-stage)</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Port</span><span class="svc-detail-val">8000</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Dev</span><span class="svc-detail-val">uvicorn --reload</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Prod</span><span class="svc-detail-val">gunicorn -w 4</span></div>
+          </div>
+          <div class="svc-deps">Depends on: PostgreSQL ✅ + Redis ✅</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.4" style="border-left-color: var(--orange);">
+          <div class="svc-header"><span class="svc-icon">⏳</span><div><div class="svc-name">Celery Worker</div><div class="svc-image">same backend image</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Concurrency</span><span class="svc-detail-val">2 workers</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Broker</span><span class="svc-detail-val">Redis</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Tasks</span><span class="svc-detail-val">Emails, reports</span></div>
+          </div>
+          <div class="svc-deps">Depends on: PostgreSQL ✅ + Redis ✅</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.5" style="border-left-color: var(--orange);">
+          <div class="svc-header"><span class="svc-icon">🕐</span><div><div class="svc-name">Celery Beat</div><div class="svc-image">same backend image</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Role</span><span class="svc-detail-val">Scheduler</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Schedule</span><span class="svc-detail-val">Daily + Weekly</span></div>
+          </div>
+          <div class="svc-deps">Depends on: Redis ✅</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.6" style="border-left-color: var(--green);">
+          <div class="svc-header"><span class="svc-icon">🌐</span><div><div class="svc-name">Nginx</div><div class="svc-image">nginx:1.25-alpine</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Port</span><span class="svc-detail-val">80</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Rate Limit</span><span class="svc-detail-val">3 zones</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Features</span><span class="svc-detail-val">Gzip · SSE · Headers</span></div>
+          </div>
+          <div class="svc-deps">Depends on: Backend ✅ (service_healthy)</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.7" style="border-left-color: var(--green);">
+          <div class="svc-header"><span class="svc-icon">📦</span><div><div class="svc-name">MinIO</div><div class="svc-image">minio/minio</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">API</span><span class="svc-detail-val">:9000</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Console</span><span class="svc-detail-val">:9001</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">S3 Compatible</span><span class="svc-detail-val">Same boto3 code</span></div>
+          </div>
+          <div class="svc-deps">Depends on: nothing</div>
+        </div>
+
+        <div class="docker-svc" data-delay="0.8" style="border-left-color: var(--purple);">
+          <div class="svc-header"><span class="svc-icon">🧠</span><div><div class="svc-name">Ollama</div><div class="svc-image">ollama/ollama</div></div></div>
+          <div class="svc-status healthy"><span class="status-dot"></span> Healthy</div>
+          <div class="svc-details">
+            <div class="svc-detail-row"><span class="svc-detail-label">Port</span><span class="svc-detail-val">11434</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Chat Model</span><span class="svc-detail-val">llama3.1:8b</span></div>
+            <div class="svc-detail-row"><span class="svc-detail-label">Embed Model</span><span class="svc-detail-val">nomic-embed-text</span></div>
+          </div>
+          <div class="svc-deps">Depends on: nothing</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════ 3 COMPOSE FILES ══════════ -->
+    <section class="section">
+      <h2 class="section-title">3 Compose Files</h2>
+      <div class="compose-tabs">
+        <button class="compose-tab active" onclick="showCompose('prod')">docker-compose.yml</button>
+        <button class="compose-tab" onclick="showCompose('dev')">docker-compose.dev.yml</button>
+        <button class="compose-tab" onclick="showCompose('test')">docker-compose.test.yml</button>
+      </div>
+
+      <div class="compose-panel active" id="compose-prod">
+        <div class="compose-info">🏭 <strong>Production-like</strong> — all 8 services, health checks, named volumes, restart policies.</div>
+        <div class="compose-services">
+          <span class="compose-svc-chip">🌐 nginx</span><span class="compose-svc-chip">⚡ backend</span><span class="compose-svc-chip">⏳ celery-worker</span><span class="compose-svc-chip">🕐 celery-beat</span><span class="compose-svc-chip">🐘 postgres</span><span class="compose-svc-chip">🔴 redis</span><span class="compose-svc-chip">📦 minio</span><span class="compose-svc-chip">🧠 ollama</span>
+        </div>
+        <div style="margin-top:12px;font-size:0.82rem;color:var(--text-secondary);">Command: <code style="background:var(--bg-secondary);padding:2px 8px;border-radius:4px;">make up</code> or <code style="background:var(--bg-secondary);padding:2px 8px;border-radius:4px;">docker-compose up -d</code></div>
+      </div>
+
+      <div class="compose-panel" id="compose-dev">
+        <div class="compose-info">💻 <strong>Development override</strong> — hot reload, debug mode, celery/nginx hidden via profiles.</div>
+        <div class="compose-services">
+          <span class="compose-svc-chip" style="border-color:var(--green);background:var(--green-light);">⚡ backend (--reload)</span><span class="compose-svc-chip">🐘 postgres</span><span class="compose-svc-chip">🔴 redis</span><span class="compose-svc-chip">📦 minio</span><span class="compose-svc-chip">🧠 ollama</span>
+          <span class="compose-svc-chip" style="opacity:.4;text-decoration:line-through;">🌐 nginx (hidden)</span>
+          <span class="compose-svc-chip" style="opacity:.4;text-decoration:line-through;">⏳ celery (hidden)</span>
+        </div>
+        <div style="margin-top:12px;font-size:0.82rem;color:var(--text-secondary);">Command: <code style="background:var(--bg-secondary);padding:2px 8px;border-radius:4px;">make dev</code> — volume mounts for code, uvicorn --reload</div>
+      </div>
+
+      <div class="compose-panel" id="compose-test">
+        <div class="compose-info">🧪 <strong>Test only</strong> — minimal: just PostgreSQL + Redis on different ports. Data in tmpfs (RAM).</div>
+        <div class="compose-services">
+          <span class="compose-svc-chip" style="border-color:var(--purple);">🐘 postgres-test (:5433)</span>
+          <span class="compose-svc-chip" style="border-color:var(--red);">🔴 redis-test (:6380)</span>
+        </div>
+        <div style="margin-top:12px;font-size:0.82rem;color:var(--text-secondary);">Command: <code style="background:var(--bg-secondary);padding:2px 8px;border-radius:4px;">make test</code> — starts test DBs, runs pytest, stops DBs</div>
+      </div>
+    </section>
+
+    <!-- ══════════ DOCKERFILE STAGES ══════════ -->
+    <section class="section">
+      <h2 class="section-title">Multi-Stage Dockerfile</h2>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
+        <div class="card fade-in delay-3" style="flex:1;min-width:220px;max-width:300px;text-align:center;border-top:4px solid var(--orange);">
+          <h3>Stage 1: Builder</h3>
+          <p style="font-size:2rem;margin:8px 0;">🔨</p>
+          <p style="font-size:0.85rem;">Install gcc + libpq-dev + pip packages into /install prefix. ~500 MB.</p>
+          <span class="chip chip-orange">Build only</span>
+        </div>
+        <div style="align-self:center;font-size:1.5rem;color:var(--brand-400);">→</div>
+        <div class="card fade-in delay-4" style="flex:1;min-width:220px;max-width:300px;text-align:center;border-top:4px solid var(--brand-500);">
+          <h3>Stage 2: Development</h3>
+          <p style="font-size:2rem;margin:8px 0;">💻</p>
+          <p style="font-size:0.85rem;">Copies from builder + dev tools + all code. uvicorn --reload. ~400 MB.</p>
+          <span class="chip chip-blue">Dev mode</span>
+        </div>
+        <div style="align-self:center;font-size:1.5rem;color:var(--brand-400);">→</div>
+        <div class="card fade-in delay-5" style="flex:1;min-width:220px;max-width:300px;text-align:center;border-top:4px solid var(--green);">
+          <h3>Stage 3: Production</h3>
+          <p style="font-size:2rem;margin:8px 0;">🚀</p>
+          <p style="font-size:0.85rem;">Only app/ + alembic/. Non-root user. gunicorn -w 4. <strong>~150 MB.</strong></p>
+          <span class="chip chip-green">Production</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p><a href="05-testing-flow.html" style="color:var(--brand-500);text-decoration:none;">← Testing</a> · Docker Services · <a href="07-cicd-pipeline.html" style="color:var(--brand-500);text-decoration:none;">CI/CD Pipeline →</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // Animate service cards on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const delay = e.target.dataset.delay || 0;
+          setTimeout(() => e.target.classList.add('visible'), delay * 1000);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.docker-svc').forEach(el => observer.observe(el));
+
+    // Animate startup boxes
+    setTimeout(() => {
+      ['st-pg','st-redis'].forEach(id => document.getElementById(id)?.classList.add('on'));
+    }, 1500);
+    setTimeout(() => {
+      ['st-minio','st-ollama'].forEach(id => document.getElementById(id)?.classList.add('on'));
+    }, 2500);
+    setTimeout(() => {
+      ['st-backend','st-celery'].forEach(id => document.getElementById(id)?.classList.add('on'));
+    }, 3500);
+    setTimeout(() => {
+      document.getElementById('st-nginx')?.classList.add('on');
+    }, 4500);
+
+    // Compose tabs
+    function showCompose(name) {
+      document.querySelectorAll('.compose-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.compose-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('compose-' + name).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

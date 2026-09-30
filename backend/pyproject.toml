@@ -1,0 +1,79 @@
+# ============================================================================
+# Health Tracker — Tool Configuration
+# ============================================================================
+# This file configures all our development tools in one place.
+# WHY pyproject.toml: Modern Python standard for project config.
+#   Instead of separate .flake8, .mypy.ini, pytest.ini files,
+#   everything lives here. Cleaner project root.
+# ============================================================================
+
+[project]
+name = "health-tracker"
+version = "1.0.0"
+description = "AI-Powered Personal Health & Habit Tracker"
+requires-python = ">=3.11"
+
+# ── Ruff (Linter + Formatter) ──
+# Ruff replaces flake8, black, isort — 10-100x faster because it's written in Rust
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+# Rules we enforce:
+# E = pycodestyle errors (basic style)
+# F = pyflakes (unused imports, undefined names)
+# I = isort (import sorting)
+# N = pep8-naming (function_names, ClassName)
+# UP = pyupgrade (use modern Python syntax)
+# B = bugbear (common bugs)
+# SIM = simplify (simpler code patterns)
+select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+ignore = [
+    "E501",   # Line too long — we set line-length above, ruff formatter handles this
+    "B008",   # Do not perform function call in argument defaults — FastAPI uses Depends()
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# ── MyPy (Type Checker) ──
+# Catches type errors at development time, not production runtime
+[tool.mypy]
+python_version = "3.11"
+strict = false                        # Start with basic checking, enable strict later
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true         # Don't error on untyped third-party libs
+plugins = ["pydantic.mypy"]           # Understands Pydantic models
+
+# ── Pytest ──
+[tool.pytest.ini_options]
+# Where to find tests
+testpaths = ["tests"]
+# Default flags when running pytest
+addopts = [
+    "-v",                             # Verbose output (show test names)
+    "--tb=short",                     # Short traceback on failure
+    "--strict-markers",               # Error if unknown markers used
+]
+# Custom markers for test categorization
+markers = [
+    "unit: Unit tests (no external dependencies)",
+    "integration: Integration tests (needs DB + Redis)",
+    "slow: Slow tests (AI calls, large data)",
+]
+# Async mode for pytest-asyncio
+asyncio_mode = "auto"
+
+# ── Coverage ──
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/tasks/*",                    # Celery tasks tested separately
+    "alembic/*",                      # Migration files
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70                       # Fail if coverage drops below 70%

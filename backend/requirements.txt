@@ -1,0 +1,56 @@
+# ============================================================================
+# Health Tracker — Production Dependencies
+# ============================================================================
+# Install: pip install -r requirements.txt
+#
+# WHY pinned versions:
+#   In production, you NEVER use "fastapi>=0.110". If a new version has a bug,
+#   your app breaks. Pinned versions = reproducible builds.
+#   Companies enforce this via pip-compile or poetry.lock
+# ============================================================================
+
+# ── Web Framework ──
+fastapi==0.115.0            # Async API framework — auto OpenAPI docs, dependency injection
+uvicorn[standard]==0.30.6   # ASGI server — runs FastAPI in development
+gunicorn==22.0.0            # Production server — manages multiple uvicorn workers
+
+# ── Database ──
+sqlalchemy[asyncio]==2.0.35  # ORM — async support, relationship mapping
+asyncpg==0.29.0             # Async PostgreSQL driver (used by SQLAlchemy)
+psycopg2-binary==2.9.9      # Sync PostgreSQL driver (used by Alembic migrations)
+alembic==1.13.2             # Database migration tool — schema versioning
+pgvector==0.3.5             # pgvector Python support — vector similarity search for RAG
+
+# ── Redis ──
+redis[hiredis]==5.1.1       # Async Redis client + C parser for performance
+
+# ── Auth & Security ──
+python-jose[cryptography]==3.3.0  # JWT token creation and verification
+passlib[bcrypt]==1.7.4      # Password hashing with bcrypt (industry standard)
+python-multipart==0.0.9     # Required for FastAPI form data (login forms)
+
+# ── Validation & Settings ──
+pydantic==2.9.2             # Data validation — request/response schemas
+pydantic-settings==2.5.2    # Environment variable management (reads .env)
+email-validator==2.2.0      # Email format validation for user registration
+
+# ── HTTP Client ──
+httpx==0.27.2               # Async HTTP client — for calling LLM APIs (Ollama, Groq, OpenAI)
+
+# ── Background Tasks ──
+celery==5.4.0               # Distributed task queue — background jobs
+celery[redis]==5.4.0        # Celery with Redis as message broker
+
+# ── AI / LLM ──
+jinja2==3.1.4               # Template engine — for prompt templates and email templates
+tiktoken==0.7.0             # OpenAI tokenizer — count tokens before sending to LLM
+PyPDF2==3.0.1               # PDF text extraction — for RAG document processing
+
+# ── Logging ──
+structlog==24.4.0           # Structured JSON logging — production-grade logs
+
+# ── AWS ──
+boto3==1.35.19              # AWS SDK — S3, SES, SQS, Lambda integration
+
+# ── Utilities ──
+python-dateutil==2.9.0      # Date parsing and timezone handling

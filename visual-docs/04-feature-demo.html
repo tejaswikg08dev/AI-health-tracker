@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Demo — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── Feature Tabs ── */
+    .feat-tabs {
+      display: flex; gap: 4px; background: var(--gray-100); padding: 5px; border-radius: 14px;
+      overflow-x: auto; margin: var(--space-xl) 0; -webkit-overflow-scrolling: touch;
+    }
+    .feat-tab {
+      padding: 10px 16px; border-radius: 10px; border: none; background: transparent; cursor: pointer;
+      font-family: var(--font-sans); font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);
+      transition: all 0.3s; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+    }
+    .feat-tab:hover { color: var(--text); }
+    .feat-tab.active { background: var(--bg); color: var(--text); box-shadow: var(--shadow); }
+    @media (prefers-color-scheme: dark) { .feat-tabs { background: var(--bg-secondary); } .feat-tab.active { background: var(--gray-700); } }
+
+    .feat-panel { display: none; animation: fadeInUp 0.5s var(--ease-out); }
+    .feat-panel.active { display: block; }
+
+    /* ── App Mockup Frame ── */
+    .mockup {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+      overflow: hidden; box-shadow: var(--shadow-lg); max-width: 900px; margin: 0 auto;
+    }
+    .mockup-bar {
+      background: var(--bg-secondary); padding: 10px 16px; display: flex; align-items: center;
+      gap: 8px; border-bottom: 1px solid var(--border);
+    }
+    .mockup-dots { display: flex; gap: 6px; }
+    .mockup-dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .mockup-url {
+      flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 4px 12px; font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);
+    }
+    .mockup-body { padding: 24px; min-height: 400px; }
+
+    /* ── Mock App Components ── */
+    .mock-navbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; background: white; border-bottom: 1px solid var(--gray-200);
+      border-radius: 10px 10px 0 0; margin: -24px -24px 20px -24px;
+    }
+    @media (prefers-color-scheme: dark) { .mock-navbar { background: var(--gray-800); border-color: var(--gray-700); } }
+    .mock-logo { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .mock-user { font-size: 0.8rem; color: var(--text-muted); }
+
+    .mock-sidebar {
+      width: 180px; float: left; margin-right: 20px; background: var(--bg-secondary);
+      border-radius: 10px; padding: 12px;
+    }
+    .mock-sidebar-item {
+      padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 500;
+      color: var(--text-secondary); margin-bottom: 2px; display: flex; align-items: center; gap: 8px;
+    }
+    .mock-sidebar-item.active { background: var(--brand-50); color: var(--brand-700); }
+    @media (prefers-color-scheme: dark) { .mock-sidebar-item.active { background: rgba(59,130,246,0.15); color: var(--brand-300); } }
+
+    .mock-content { overflow: hidden; }
+
+    /* ── Summary Cards ── */
+    .mock-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .mock-card {
+      background: white; border: 1px solid var(--gray-200); border-radius: 10px; padding: 14px;
+      opacity: 0; animation: scaleIn 0.4s var(--ease-spring) forwards;
+    }
+    @media (prefers-color-scheme: dark) { .mock-card { background: var(--gray-800); border-color: var(--gray-700); } }
+    .mock-card .mc-icon { font-size: 1.3rem; }
+    .mock-card .mc-val { font-size: 1.5rem; font-weight: 800; margin: 4px 0; }
+    .mock-card .mc-label { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* ── Habit Cards ── */
+    .mock-habit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .mock-habit {
+      background: white; border: 1px solid var(--gray-200); border-radius: 12px; padding: 14px;
+      opacity: 0; animation: fadeInUp 0.4s var(--ease-out) forwards;
+      display: flex; align-items: center; gap: 10px;
+    }
+    @media (prefers-color-scheme: dark) { .mock-habit { background: var(--gray-800); border-color: var(--gray-700); } }
+    .mock-habit-icon {
+      width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.2rem;
+    }
+    .mock-habit-name { font-weight: 600; font-size: 0.9rem; }
+    .mock-habit-type { font-size: 0.72rem; color: var(--text-muted); }
+
+    /* ── Check-In Row ── */
+    .mock-checkin-row {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: white;
+      border: 1px solid var(--gray-200); border-radius: 10px; margin-bottom: 8px;
+      opacity: 0; animation: fadeInUp 0.3s var(--ease-out) forwards;
+    }
+    @media (prefers-color-scheme: dark) { .mock-checkin-row { background: var(--gray-800); border-color: var(--gray-700); } }
+    .mock-checkin-row.logged { border-color: var(--green); background: rgba(16,185,129,0.04); }
+    .mock-input {
+      width: 60px; padding: 6px; border: 1px solid var(--gray-300); border-radius: 6px;
+      text-align: center; font-size: 0.85rem; font-family: var(--font-sans);
+    }
+    .mock-toggle {
+      padding: 6px 16px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; border: none; cursor: default;
+    }
+    .mock-toggle.on { background: var(--green); color: white; }
+    .mock-toggle.off { background: var(--gray-200); color: var(--gray-500); }
+    .mock-slider { width: 80px; accent-color: var(--brand-500); }
+    .mock-save-btn {
+      width: 100%; padding: 12px; background: var(--brand-600); color: white; border: none;
+      border-radius: 10px; font-weight: 600; font-size: 0.9rem; margin-top: 12px;
+      cursor: default; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    /* ── Chart Placeholders ── */
+    .mock-chart {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; min-height: 250px; display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-end; gap: 8px;
+    }
+    .bar-row { display: flex; align-items: flex-end; gap: 16px; height: 180px; }
+    .bar-group { display: flex; gap: 4px; align-items: flex-end; text-align: center; }
+    .bar {
+      width: 28px; border-radius: 4px 4px 0 0; animation: barGrow 0.8s var(--ease-out) forwards;
+      transform-origin: bottom;
+    }
+    @keyframes barGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    .bar-label { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── Chat Mockup ── */
+    .mock-chat { display: flex; flex-direction: column; height: 350px; }
+    .mock-messages { flex: 1; overflow: hidden; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .mock-msg {
+      max-width: 70%; padding: 10px 14px; border-radius: 16px; font-size: 0.85rem; line-height: 1.5;
+      opacity: 0; animation: fadeInUp 0.4s var(--ease-out) forwards;
+    }
+    .mock-msg.user { align-self: flex-end; background: var(--brand-600); color: white; border-bottom-right-radius: 4px; }
+    .mock-msg.bot { align-self: flex-start; background: var(--gray-100); color: var(--text); border-bottom-left-radius: 4px; }
+    @media (prefers-color-scheme: dark) { .mock-msg.bot { background: var(--gray-700); } }
+    .mock-msg .typing { display: inline-flex; gap: 4px; }
+    .mock-msg .typing span {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+      animation: typingDot 1.4s ease infinite;
+    }
+    .mock-msg .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .mock-msg .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+    .mock-chat-input {
+      display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border);
+    }
+    .mock-chat-field {
+      flex: 1; padding: 8px 14px; border: 1px solid var(--gray-300); border-radius: 10px;
+      font-size: 0.85rem; color: var(--text-muted); background: var(--bg);
+    }
+    .mock-send-btn {
+      background: var(--brand-600); color: white; border: none; border-radius: 10px;
+      padding: 8px 14px; font-size: 0.85rem; cursor: default;
+    }
+
+    /* ── Login Mockup ── */
+    .mock-login {
+      max-width: 380px; margin: 0 auto; text-align: center; padding-top: 20px;
+    }
+    .mock-login-icon { font-size: 3rem; }
+    .mock-form-field {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--gray-300); border-radius: 8px;
+      margin-bottom: 10px; font-size: 0.85rem; background: var(--bg); color: var(--text-secondary);
+    }
+    .mock-submit-btn {
+      width: 100%; padding: 10px; background: var(--brand-600); color: white; border: none;
+      border-radius: 8px; font-weight: 600; cursor: default; margin-top: 4px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .mock-cards { grid-template-columns: repeat(2, 1fr); }
+      .mock-habit-grid { grid-template-columns: 1fr; }
+      .mock-sidebar { display: none; }
+    }
+
+    /* ── Stagger helpers ── */
+    .s1 { animation-delay: 0.1s; } .s2 { animation-delay: 0.2s; } .s3 { animation-delay: 0.3s; }
+    .s4 { animation-delay: 0.4s; } .s5 { animation-delay: 0.5s; } .s6 { animation-delay: 0.6s; }
+    .s7 { animation-delay: 0.7s; } .s8 { animation-delay: 0.8s; } .s9 { animation-delay: 0.9s; }
+
+    /* ── API Call indicator ── */
+    .api-call {
+      margin-top: 16px; padding: 10px 14px; background: #1a1b26; border-radius: 8px;
+      font-family: var(--font-mono); font-size: 0.75rem; color: #7aa2f7;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .api-method { color: #9ece6a; font-weight: 700; }
+    .api-path { color: #c0caf5; }
+    .api-status { margin-left: auto; color: #9ece6a; }
+  </style>
+</head>
+<body>
+  <div class="container page">
+
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links">
+        <a href="03-dev-setup.html">← Dev Setup</a>
+        <a href="05-testing-flow.html">Next: Testing →</a>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">04 / 10 — Features</div>
+      <h1 class="fade-in delay-1">🎬 Feature <span class="gradient-text">Demo</span></h1>
+      <p class="fade-in delay-2">All 8 features animated with mockup screens, the API calls underneath, and the database queries running behind the scenes.</p>
+    </section>
+
+    <!-- Feature Tabs -->
+    <div class="feat-tabs fade-in delay-3">
+      <button class="feat-tab active" onclick="showFeat('login')">🔑 Login</button>
+      <button class="feat-tab" onclick="showFeat('dashboard')">📊 Dashboard</button>
+      <button class="feat-tab" onclick="showFeat('habits')">📋 Habits</button>
+      <button class="feat-tab" onclick="showFeat('checkin')">✅ Check-In</button>
+      <button class="feat-tab" onclick="showFeat('analytics')">📈 Analytics</button>
+      <button class="feat-tab" onclick="showFeat('chat')">🤖 AI Chat</button>
+      <button class="feat-tab" onclick="showFeat('export')">📁 Export</button>
+      <button class="feat-tab" onclick="showFeat('settings')">⚙️ Settings</button>
+    </div>
+
+    <!-- ════════════ LOGIN ════════════ -->
+    <div class="feat-panel active" id="feat-login">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/login</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-login">
+            <div class="mock-login-icon">🏥</div>
+            <h2 style="margin:10px 0 4px;">Welcome back</h2>
+            <p style="font-size:0.85rem; margin-bottom:20px;">Sign in to your Health Tracker</p>
+            <input class="mock-form-field" value="shreya@test.com" readonly>
+            <input class="mock-form-field" type="password" value="••••••••" readonly>
+            <div class="mock-submit-btn">🔓 Sign in</div>
+            <p style="font-size:0.8rem; color: var(--text-muted); margin-top:16px;">Don't have an account? <span style="color: var(--brand-500);">Sign up</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">POST</span>
+        <span class="api-path">/api/v1/auth/login</span>
+        <span>→ bcrypt verify → JWT create</span>
+        <span class="api-status">200 {access_token, refresh_token}</span>
+      </div>
+    </div>
+
+    <!-- ════════════ DASHBOARD ════════════ -->
+    <div class="feat-panel" id="feat-dashboard">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-navbar"><span class="mock-logo">🏥 Health Tracker</span><span class="mock-user">👤 Shreya · Logout</span></div>
+          <div class="mock-sidebar">
+            <div class="mock-sidebar-item active">📊 Dashboard</div>
+            <div class="mock-sidebar-item">📋 Habits</div>
+            <div class="mock-sidebar-item">✅ Check In</div>
+            <div class="mock-sidebar-item">📈 Analytics</div>
+            <div class="mock-sidebar-item">🤖 AI Coach</div>
+            <div class="mock-sidebar-item">⚙️ Settings</div>
+          </div>
+          <div class="mock-content">
+            <h3 style="margin-bottom:14px;">Dashboard</h3>
+            <div class="mock-cards">
+              <div class="mock-card s1"><div class="mc-icon">✅</div><div class="mc-val" style="color:var(--green)">4/6</div><div class="mc-label">Today's Progress</div></div>
+              <div class="mock-card s2"><div class="mc-icon">🎯</div><div class="mc-val" style="color:var(--brand-500)">6</div><div class="mc-label">Active Habits</div></div>
+              <div class="mock-card s3"><div class="mc-icon">🔥</div><div class="mc-val" style="color:var(--orange)">30 days</div><div class="mc-label">Best Streak</div></div>
+              <div class="mock-card s4"><div class="mc-icon">📈</div><div class="mc-val" style="color:var(--purple)">78%</div><div class="mc-label">Week Completion</div></div>
+            </div>
+            <div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:14px;">
+              <h4 style="margin-bottom:10px;">🔥 Current Streaks</h4>
+              <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span>💧 Water Intake</span><span style="font-weight:800;color:var(--brand-500);">30 days</span></div>
+              <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);"><span>😴 Sleep</span><span style="font-weight:800;color:var(--purple);">14 days</span></div>
+              <div style="display:flex;justify-content:space-between;padding:6px 0;"><span>🏃 Exercise</span><span style="font-weight:800;color:var(--green);">7 days</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">GET</span>
+        <span class="api-path">/api/v1/analytics/dashboard</span>
+        <span>→ 5 SQL queries (cached 5 min)</span>
+        <span class="api-status">200 {today_logged: 4, ...}</span>
+      </div>
+    </div>
+
+    <!-- ════════════ HABITS ════════════ -->
+    <div class="feat-panel" id="feat-habits">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/habits</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-navbar"><span class="mock-logo">🏥 Health Tracker</span><span class="mock-user">👤 Shreya</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3>My Habits</h3><span style="background:var(--brand-600);color:white;padding:6px 14px;border-radius:8px;font-size:0.85rem;font-weight:600;">+ Add Habit</span></div>
+          <div class="mock-habit-grid">
+            <div class="mock-habit s1"><div class="mock-habit-icon" style="background:rgba(59,130,246,0.1);">💧</div><div><div class="mock-habit-name">Water Intake</div><div class="mock-habit-type">Target: 8 glasses</div></div></div>
+            <div class="mock-habit s2"><div class="mock-habit-icon" style="background:rgba(139,92,246,0.1);">😴</div><div><div class="mock-habit-name">Sleep Hours</div><div class="mock-habit-type">Target: 7.5 hours</div></div></div>
+            <div class="mock-habit s3"><div class="mock-habit-icon" style="background:rgba(16,185,129,0.1);">🏃</div><div><div class="mock-habit-name">Exercise</div><div class="mock-habit-type">Yes / No</div></div></div>
+            <div class="mock-habit s4"><div class="mock-habit-icon" style="background:rgba(245,158,11,0.1);">😊</div><div><div class="mock-habit-name">Mood</div><div class="mock-habit-type">Scale 1–10</div></div></div>
+            <div class="mock-habit s5"><div class="mock-habit-icon" style="background:rgba(236,72,153,0.1);">📖</div><div><div class="mock-habit-name">Reading</div><div class="mock-habit-type">Target: 30 minutes</div></div></div>
+            <div class="mock-habit s6"><div class="mock-habit-icon" style="background:rgba(6,182,212,0.1);">🧘</div><div><div class="mock-habit-name">Meditation</div><div class="mock-habit-type">Target: 10 minutes</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">GET</span>
+        <span class="api-path">/api/v1/habits?include_archived=false</span>
+        <span>→ SELECT * FROM habits WHERE user_id=? AND is_archived=false ORDER BY sort_order</span>
+        <span class="api-status">200 [6 habits]</span>
+      </div>
+    </div>
+
+    <!-- ════════════ CHECK-IN ════════════ -->
+    <div class="feat-panel" id="feat-checkin">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/check-in</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-navbar"><span class="mock-logo">🏥 Health Tracker</span><span class="mock-user">👤 Shreya</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3>✅ Daily Check-in</h3>
+            <div style="display:flex;align-items:center;gap:12px;"><span style="cursor:default;">◀</span><span style="font-weight:600;">Today</span><span style="cursor:default;opacity:0.3;">▶</span></div>
+          </div>
+          <div class="mock-checkin-row logged s1"><span style="font-size:1.3rem;">💧</span><div style="flex:1;"><div style="font-weight:600;font-size:0.9rem;">Water Intake</div><div style="font-size:0.7rem;color:var(--text-muted);">Target: 8 glasses</div></div><input class="mock-input" value="8" readonly><span style="font-size:0.8rem;">glasses</span><span style="color:var(--green);">✅</span></div>
+          <div class="mock-checkin-row logged s2"><span style="font-size:1.3rem;">😴</span><div style="flex:1;"><div style="font-weight:600;font-size:0.9rem;">Sleep Hours</div><div style="font-size:0.7rem;color:var(--text-muted);">Target: 7.5 hours</div></div><input class="mock-input" value="7.5" readonly><span style="font-size:0.8rem;">hours</span><span style="color:var(--green);">✅</span></div>
+          <div class="mock-checkin-row logged s3"><span style="font-size:1.3rem;">🏃</span><div style="flex:1;"><div style="font-weight:600;font-size:0.9rem;">Exercise</div><div style="font-size:0.7rem;color:var(--text-muted);">Yes / No</div></div><span class="mock-toggle on">✅ Done</span><span style="color:var(--green);">✅</span></div>
+          <div class="mock-checkin-row s4"><span style="font-size:1.3rem;">😊</span><div style="flex:1;"><div style="font-weight:600;font-size:0.9rem;">Mood</div><div style="font-size:0.7rem;color:var(--text-muted);">Rate 1–10</div></div><input type="range" class="mock-slider" min="1" max="10" value="7"><span style="font-weight:800;color:var(--orange);width:20px;text-align:center;">7</span></div>
+          <div class="mock-checkin-row s5"><span style="font-size:1.3rem;">📖</span><div style="flex:1;"><div style="font-weight:600;font-size:0.9rem;">Reading</div><div style="font-size:0.7rem;color:var(--text-muted);">Target: 30 min</div></div><input class="mock-input" value="" placeholder="0" readonly><span style="font-size:0.8rem;">min</span></div>
+          <div class="mock-save-btn s6">💾 Save All</div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">POST</span>
+        <span class="api-path">/api/v1/logs/bulk</span>
+        <span>→ 6× INSERT INTO habit_logs + SQS streak messages</span>
+        <span class="api-status">201 [6 logs]</span>
+      </div>
+    </div>
+
+    <!-- ════════════ ANALYTICS ════════════ -->
+    <div class="feat-panel" id="feat-analytics">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/analytics</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-navbar"><span class="mock-logo">🏥 Health Tracker</span><span class="mock-user">👤 Shreya</span></div>
+          <h3 style="margin-bottom:12px;">📈 Analytics</h3>
+          <div style="display:flex;gap:4px;background:var(--gray-100);padding:4px;border-radius:10px;width:fit-content;margin-bottom:16px;">
+            <span style="padding:6px 14px;background:white;border-radius:8px;font-size:0.82rem;font-weight:600;box-shadow:var(--shadow);">Weekly</span>
+            <span style="padding:6px 14px;font-size:0.82rem;color:var(--text-muted);">Monthly</span>
+            <span style="padding:6px 14px;font-size:0.82rem;color:var(--text-muted);">Completion</span>
+            <span style="padding:6px 14px;font-size:0.82rem;color:var(--text-muted);">Correlations</span>
+          </div>
+          <div class="mock-chart">
+            <div style="font-weight:600;align-self:flex-start;margin-bottom:8px;">This Week vs Last Week</div>
+            <div class="bar-row">
+              <div class="bar-group"><div class="bar" style="height:100px;background:var(--gray-300);animation-delay:0.1s;"></div><div class="bar" style="height:130px;background:var(--brand-500);animation-delay:0.2s;"></div><div class="bar-label">💧</div></div>
+              <div class="bar-group"><div class="bar" style="height:90px;background:var(--gray-300);animation-delay:0.3s;"></div><div class="bar" style="height:110px;background:var(--brand-500);animation-delay:0.4s;"></div><div class="bar-label">😴</div></div>
+              <div class="bar-group"><div class="bar" style="height:60px;background:var(--gray-300);animation-delay:0.5s;"></div><div class="bar" style="height:80px;background:var(--brand-500);animation-delay:0.6s;"></div><div class="bar-label">🏃</div></div>
+              <div class="bar-group"><div class="bar" style="height:110px;background:var(--gray-300);animation-delay:0.7s;"></div><div class="bar" style="height:120px;background:var(--brand-500);animation-delay:0.8s;"></div><div class="bar-label">😊</div></div>
+              <div class="bar-group"><div class="bar" style="height:40px;background:var(--gray-300);animation-delay:0.9s;"></div><div class="bar" style="height:70px;background:var(--brand-500);animation-delay:1.0s;"></div><div class="bar-label">📖</div></div>
+            </div>
+            <div style="display:flex;gap:16px;font-size:0.75rem;color:var(--text-muted);margin-top:8px;">
+              <span>⬜ Last Week</span><span style="color:var(--brand-500);">🟦 This Week</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">GET</span>
+        <span class="api-path">/api/v1/analytics/weekly-summary</span>
+        <span>→ AVG + comparison SQL (cached 30 min)</span>
+        <span class="api-status">200 {habits: [5 summaries]}</span>
+      </div>
+    </div>
+
+    <!-- ════════════ AI CHAT ════════════ -->
+    <div class="feat-panel" id="feat-chat">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/chat</div>
+        </div>
+        <div class="mockup-body" style="padding:0;">
+          <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="display:flex;align-items:center;gap:8px;">💬 AI Health Coach</h3>
+            <span class="chip chip-purple">✨ Agent mode</span>
+          </div>
+          <div class="mock-chat">
+            <div class="mock-messages">
+              <div class="mock-msg user s2">How's my sleep this week?</div>
+              <div class="mock-msg bot s4">
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🔧 Used tool: query_logs(habit="Sleep", days=7)</div>
+                Based on your data, you averaged <strong>7.2 hours</strong> this week — up from 6.8h last week. That's a 6% improvement! 🎉<br><br>
+                Your best night was Thursday (8h) and worst was Friday (6h). Try to keep a consistent bedtime on weekends too.
+              </div>
+              <div class="mock-msg user s6">What habits correlate with my sleep?</div>
+              <div class="mock-msg bot s8">
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🔧 Used tool: correlate_habits(habit_a="Sleep")</div>
+                Strong correlations found:<br>
+                • <strong>Exercise ↔ Sleep: 0.78</strong> (strong positive) — you sleep better on days you exercise<br>
+                • <strong>Mood ↔ Sleep: 0.65</strong> (moderate) — better sleep = better mood next day
+              </div>
+            </div>
+            <div class="mock-chat-input">
+              <div class="mock-chat-field">Ask about your health habits...</div>
+              <div class="mock-send-btn">➤</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">POST</span>
+        <span class="api-path">/api/v1/ai/chat {use_agent: true}</span>
+        <span>→ ReAct: Think → query_logs → Observe → Think → correlate → Answer</span>
+        <span class="api-status">200 ~3s</span>
+      </div>
+    </div>
+
+    <!-- ════════════ EXPORT ════════════ -->
+    <div class="feat-panel" id="feat-export">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/settings#export</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-navbar"><span class="mock-logo">🏥 Health Tracker</span><span class="mock-user">👤 Shreya</span></div>
+          <h3 style="margin-bottom:16px;">📁 Export Data</h3>
+          <div style="background:white;border:1px solid var(--gray-200);border-radius:12px;padding:20px;">
+            <p style="font-size:0.9rem;margin-bottom:16px;">Download your habit data as a CSV file.</p>
+            <div style="background:var(--green);color:white;padding:10px 20px;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:8px;">📥 Export Last 90 Days (CSV)</div>
+            <div style="margin-top:16px;background:var(--bg-secondary);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:0.75rem;overflow-x:auto;">
+              Date,Habit Name,Type,Value,Unit,Notes<br>
+              2026-09-26,Water Intake,numeric,8.0,glasses,<br>
+              2026-09-26,Exercise,boolean,Yes,,Morning run<br>
+              2026-09-26,Mood,scale,7,,Felt great today<br>
+              <span style="color:var(--text-muted);">... 537 more rows</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">POST</span>
+        <span class="api-path">/api/v1/export/csv</span>
+        <span>→ CsvGenerator (in-memory) → StreamingResponse (blob download)</span>
+        <span class="api-status">200 text/csv 📥</span>
+      </div>
+    </div>
+
+    <!-- ════════════ SETTINGS ════════════ -->
+    <div class="feat-panel" id="feat-settings">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dots"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+          <div class="mockup-url">localhost:3000/settings</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-navbar"><span class="mock-logo">🏥 Health Tracker</span><span class="mock-user">👤 Shreya</span></div>
+          <h3 style="margin-bottom:16px;">⚙️ Settings</h3>
+          <div style="background:white;border:1px solid var(--gray-200);border-radius:12px;padding:16px;margin-bottom:12px;">
+            <h4 style="margin-bottom:12px;">👤 Profile</h4>
+            <div style="margin-bottom:8px;"><span style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:2px;">Email</span><div class="mock-form-field" style="margin:0;background:var(--gray-50);color:var(--text-muted);">shreya@test.com</div></div>
+            <div style="margin-bottom:8px;"><span style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:2px;">Full Name</span><div class="mock-form-field" style="margin:0;">Shreya</div></div>
+            <span style="background:var(--brand-600);color:white;padding:6px 16px;border-radius:6px;font-size:0.85rem;font-weight:600;">Save Profile</span>
+          </div>
+          <div style="background:white;border:1px solid var(--gray-200);border-radius:12px;padding:16px;">
+            <h4 style="margin-bottom:8px;">🔔 Notifications</h4>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;"><span style="font-size:0.85rem;">Daily Reminder</span><span style="background:var(--green);color:white;padding:2px 10px;border-radius:10px;font-size:0.75rem;">ON</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;"><span style="font-size:0.85rem;">Weekly Report</span><span style="background:var(--green);color:white;padding:2px 10px;border-radius:10px;font-size:0.75rem;">ON</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;"><span style="font-size:0.85rem;">Streak Alerts</span><span style="background:var(--green);color:white;padding:2px 10px;border-radius:10px;font-size:0.75rem;">ON</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="api-call fade-in delay-3">
+        <span class="api-method">GET</span>
+        <span class="api-path">/api/v1/notifications/settings</span>
+        <span>→ Lazy create (first access creates default settings)</span>
+        <span class="api-status">200 {daily_reminder: true, ...}</span>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p><a href="03-dev-setup.html" style="color:var(--brand-500);text-decoration:none;">← Dev Setup</a> · Feature Demo · <a href="05-testing-flow.html" style="color:var(--brand-500);text-decoration:none;">Testing Flow →</a></p>
+    </footer>
+  </div>
+
+  <script>
+    function showFeat(name) {
+      document.querySelectorAll('.feat-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.feat-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('feat-' + name).classList.add('active');
+      event.target.closest('.feat-tab').classList.add('active');
+      // Re-trigger animations
+      const panel = document.getElementById('feat-' + name);
+      panel.querySelectorAll('[class*=" s"]').forEach(el => {
+        el.style.animation = 'none'; el.offsetHeight;
+        el.style.animation = '';
+      });
+    }
+  </script>
+</body>
+</html>

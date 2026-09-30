@@ -1,0 +1,36 @@
+# ── Don't send these to Docker build context ──
+# This makes docker build faster by excluding unnecessary files
+
+.git
+.gitignore
+.env
+.env.*
+*.md
+docs/
+LICENSE
+
+# Python
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+htmlcov
+.coverage
+venv
+.venv
+
+# Node
+node_modules
+frontend/node_modules
+
+# IDE
+.vscode
+.idea
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+
+# OS
+.DS_Store
+Thumbs.db

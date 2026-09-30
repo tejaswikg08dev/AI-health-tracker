@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Tracker — Visual Documentation</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    .doc-card {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .doc-card .card-number {
+      font-size: 3rem;
+      font-weight: 900;
+      opacity: 0.08;
+      position: absolute;
+      top: 12px;
+      right: 20px;
+      line-height: 1;
+    }
+    .doc-card .card { position: relative; overflow: hidden; height: 100%; }
+    .doc-card .card::after {
+      content: '→';
+      position: absolute;
+      bottom: 16px;
+      right: 20px;
+      font-size: 1.2rem;
+      color: var(--brand-400);
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: all var(--duration-normal) var(--ease-out);
+    }
+    .doc-card:hover .card::after { opacity: 1; transform: translateX(0); }
+    .doc-card .card-icon { font-size: 2rem; margin-bottom: var(--space-sm); }
+    .doc-card h3 { margin-bottom: 6px; }
+    .doc-card p { font-size: 0.85rem; margin: 0; }
+    .doc-card .card-tags { display: flex; gap: 6px; margin-top: var(--space-md); flex-wrap: wrap; }
+    .tech-marquee {
+      display: flex;
+      gap: var(--space-xl);
+      overflow: hidden;
+      padding: var(--space-md) 0;
+      mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+    }
+    .tech-marquee-inner {
+      display: flex;
+      gap: var(--space-xl);
+      animation: marquee 30s linear infinite;
+      white-space: nowrap;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .tech-item {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container page">
+
+    <!-- Navigation -->
+    <nav class="nav">
+      <a href="#" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links">
+        <a href="#guides">Visual Guides</a>
+        <a href="https://github.com" target="_blank">GitHub ↗</a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="badge fade-in">✨ Interactive Visual Documentation</div>
+      <h1 class="fade-in delay-1">
+        AI-Powered Health &<br><span class="gradient-text">Habit Tracker</span>
+      </h1>
+      <p class="fade-in delay-2">
+        A full-stack production-grade application built from scratch.
+        Explore the architecture, watch data flow through 15 layers,
+        and see how 230+ files work together — all animated.
+      </p>
+    </section>
+
+    <!-- Stats -->
+    <div class="stats-bar fade-in delay-3">
+      <div class="stat">
+        <span class="stat-value count-up">230+</span>
+        <span class="stat-label">Source Files</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value count-up">38</span>
+        <span class="stat-label">API Endpoints</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value count-up">62</span>
+        <span class="stat-label">Automated Tests</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value count-up">8</span>
+        <span class="stat-label">Docker Services</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value count-up">6</span>
+        <span class="stat-label">Lambda Functions</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value count-up">88</span>
+        <span class="stat-label">Teaching Docs</span>
+      </div>
+    </div>
+
+    <!-- Tech Marquee -->
+    <div class="tech-marquee fade-in delay-4">
+      <div class="tech-marquee-inner">
+        <span class="tech-item">🐍 Python 3.11</span>
+        <span class="tech-item">⚡ FastAPI</span>
+        <span class="tech-item">🗄️ SQLAlchemy 2.0</span>
+        <span class="tech-item">🐘 PostgreSQL + pgvector</span>
+        <span class="tech-item">🔴 Redis</span>
+        <span class="tech-item">🤖 Ollama / Groq / OpenAI</span>
+        <span class="tech-item">⚛️ React 18</span>
+        <span class="tech-item">📘 TypeScript</span>
+        <span class="tech-item">📊 Recharts</span>
+        <span class="tech-item">🐳 Docker</span>
+        <span class="tech-item">☁️ AWS Lambda</span>
+        <span class="tech-item">🔄 GitHub Actions</span>
+        <span class="tech-item">🌐 Nginx</span>
+        <span class="tech-item">🧪 pytest</span>
+        <!-- Duplicate for seamless loop -->
+        <span class="tech-item">🐍 Python 3.11</span>
+        <span class="tech-item">⚡ FastAPI</span>
+        <span class="tech-item">🗄️ SQLAlchemy 2.0</span>
+        <span class="tech-item">🐘 PostgreSQL + pgvector</span>
+        <span class="tech-item">🔴 Redis</span>
+        <span class="tech-item">🤖 Ollama / Groq / OpenAI</span>
+        <span class="tech-item">⚛️ React 18</span>
+        <span class="tech-item">📘 TypeScript</span>
+        <span class="tech-item">📊 Recharts</span>
+        <span class="tech-item">🐳 Docker</span>
+        <span class="tech-item">☁️ AWS Lambda</span>
+        <span class="tech-item">🔄 GitHub Actions</span>
+        <span class="tech-item">🌐 Nginx</span>
+        <span class="tech-item">🧪 pytest</span>
+      </div>
+    </div>
+
+    <!-- Visual Guides Grid -->
+    <section class="section" id="guides">
+      <h2 class="section-title fade-in delay-3">📖 Visual Guides</h2>
+
+      <div class="card-grid">
+
+        <a href="01-architecture-overview.html" class="doc-card fade-in delay-3">
+          <div class="card">
+            <span class="card-number">01</span>
+            <div class="card-icon">🏗️</div>
+            <h3>Architecture Overview</h3>
+            <p>Full system diagram with animated data flow paths. Click to trace login, AI chat, and Lambda flows.</p>
+            <div class="card-tags">
+              <span class="chip chip-blue">Interactive</span>
+              <span class="chip chip-green">Animated</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="02-request-flow.html" class="doc-card fade-in delay-4">
+          <div class="card">
+            <span class="card-number">02</span>
+            <div class="card-icon">🔀</div>
+            <h3>Request Flow</h3>
+            <p>One POST /logs request traced through 15 layers — from button click to database INSERT and back.</p>
+            <div class="card-tags">
+              <span class="chip chip-purple">Step-by-Step</span>
+              <span class="chip chip-green">Animated</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="03-dev-setup.html" class="doc-card fade-in delay-5">
+          <div class="card">
+            <span class="card-number">03</span>
+            <div class="card-icon">💻</div>
+            <h3>Dev Environment Setup</h3>
+            <p>Animated terminal walkthrough: clone, Docker up, migrate, seed, pull LLM models, and verify.</p>
+            <div class="card-tags">
+              <span class="chip chip-orange">Terminal</span>
+              <span class="chip chip-green">Animated</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="04-feature-demo.html" class="doc-card fade-in delay-5">
+          <div class="card">
+            <span class="card-number">04</span>
+            <div class="card-icon">🎬</div>
+            <h3>Feature Demo</h3>
+            <p>All 8 features animated: signup, habits CRUD, daily check-in, analytics charts, AI chat, export.</p>
+            <div class="card-tags">
+              <span class="chip chip-blue">8 Features</span>
+              <span class="chip chip-green">Demo</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="05-testing-flow.html" class="doc-card fade-in delay-6">
+          <div class="card">
+            <span class="card-number">05</span>
+            <div class="card-icon">🧪</div>
+            <h3>Testing Flow</h3>
+            <p>62 tests tick by with green checkmarks. Unit tests, integration tests, and coverage report animated.</p>
+            <div class="card-tags">
+              <span class="chip chip-green">62 Tests</span>
+              <span class="chip chip-blue">Coverage</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="06-docker-services.html" class="doc-card fade-in delay-6">
+          <div class="card">
+            <span class="card-number">06</span>
+            <div class="card-icon">🐳</div>
+            <h3>Docker Services</h3>
+            <p>8 containers start in dependency order with health check pulses. Click any to see its config.</p>
+            <div class="card-tags">
+              <span class="chip chip-blue">8 Services</span>
+              <span class="chip chip-green">Health Checks</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="07-cicd-pipeline.html" class="doc-card fade-in delay-7">
+          <div class="card">
+            <span class="card-number">07</span>
+            <div class="card-icon">🔄</div>
+            <h3>CI/CD Pipeline</h3>
+            <p>GitHub Actions: lint → test → build animated stage by stage. Service containers spin up in CI.</p>
+            <div class="card-tags">
+              <span class="chip chip-orange">3 Stages</span>
+              <span class="chip chip-green">5 Jobs</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="08-aws-deployment.html" class="doc-card fade-in delay-7">
+          <div class="card">
+            <span class="card-number">08</span>
+            <div class="card-icon">☁️</div>
+            <h3>AWS Deployment</h3>
+            <p>Production architecture: ECS Fargate, RDS, ElastiCache, Lambda, CloudFront — animated deploy flow.</p>
+            <div class="card-tags">
+              <span class="chip chip-orange">Production</span>
+              <span class="chip chip-purple">AWS</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="09-ai-deep-dive.html" class="doc-card fade-in delay-8">
+          <div class="card">
+            <span class="card-number">09</span>
+            <div class="card-icon">🤖</div>
+            <h3>AI Deep Dive</h3>
+            <p>4 AI systems animated: LLM Strategy pattern, RAG pipeline, ReAct agent loop, weekly report workflow.</p>
+            <div class="card-tags">
+              <span class="chip chip-purple">4 Systems</span>
+              <span class="chip chip-blue">From Scratch</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="10-database-schema.html" class="doc-card fade-in delay-8">
+          <div class="card">
+            <span class="card-number">10</span>
+            <div class="card-icon">🗄️</div>
+            <h3>Database Schema</h3>
+            <p>8 tables appear in migration order. FK arrows draw between them. Click any table for sample data.</p>
+            <div class="card-tags">
+              <span class="chip chip-purple">8 Tables</span>
+              <span class="chip chip-green">pgvector</span>
+            </div>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Built from scratch by Shreya — 230+ files, 38 endpoints, 62 tests, 0 tutorials copied.</p>
+      <p style="margin-top: 4px;">Open any HTML file in a browser — no build step, no dependencies.</p>
+    </footer>
+
+  </div>
+</body>
+</html>

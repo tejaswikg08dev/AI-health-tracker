@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Schema — Health Tracker</title>
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    /* ── Table Cards ── */
+    .table-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin:var(--space-xl) 0; }
+    .db-table {
+      background:var(--bg-card); border:2px solid var(--border); border-radius:14px;
+      overflow:hidden; transition:all .3s; opacity:0; animation:fadeInUp .5s var(--ease-out) forwards;
+    }
+    .db-table:hover { border-color:var(--brand-400); box-shadow:var(--shadow-glow); }
+    .db-table-header {
+      padding:14px 18px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:10px;
+    }
+    .tbl-icon { font-size:1.4rem; }
+    .tbl-name { font-weight:700; font-family:var(--font-mono); font-size:.95rem; flex:1; }
+    .tbl-part { font-size:.7rem; color:var(--text-muted); }
+    .tbl-rows { font-size:.72rem; font-weight:600; }
+
+    .db-table-body { padding:0; }
+    .col-row {
+      display:flex; align-items:center; gap:8px; padding:6px 18px;
+      border-bottom:1px solid var(--border); font-size:.8rem;
+    }
+    .col-row:last-child { border-bottom:none; }
+    .col-key { width:16px; text-align:center; font-size:.7rem; flex-shrink:0; }
+    .col-key.pk { color:var(--orange); font-weight:700; }
+    .col-key.fk { color:var(--purple); font-weight:700; }
+    .col-name { font-family:var(--font-mono); font-weight:500; flex:1; font-size:.78rem; }
+    .col-type { font-family:var(--font-mono); font-size:.7rem; color:var(--text-muted); white-space:nowrap; }
+    .col-note { font-size:.65rem; color:var(--text-muted); margin-left:auto; white-space:nowrap; }
+
+    /* ── Relationship Diagram ── */
+    .rel-diagram {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:14px;
+      padding:var(--space-lg); margin:var(--space-xl) 0; overflow-x:auto;
+    }
+    .rel-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0; }
+    .rel-box {
+      padding:8px 14px; border-radius:8px; font-family:var(--font-mono); font-size:.82rem;
+      font-weight:600; border:2px solid var(--border); background:var(--bg-card);
+      white-space:nowrap; opacity:0; animation:scaleIn .4s var(--ease-spring) forwards;
+    }
+    .rel-arrow { color:var(--brand-400); font-size:1.1rem; animation:arrowSlide 1.5s ease infinite; }
+    @keyframes arrowSlide{0%,100%{transform:translateX(0);opacity:.5}50%{transform:translateX(3px);opacity:1}}
+
+    /* ── Sample Data ── */
+    .sample-data {
+      font-family:var(--font-mono); font-size:.72rem; background:#1a1b26; color:#c0caf5;
+      border-radius:8px; padding:12px; margin-top:10px; overflow-x:auto; display:none;
+    }
+    .sample-data.open { display:block; animation:fadeInUp .3s var(--ease-out); }
+    .sample-toggle {
+      font-size:.75rem; color:var(--brand-500); cursor:pointer; padding:6px 18px;
+      border-top:1px solid var(--border); display:block; text-align:center;
+    }
+    .sample-toggle:hover { background:var(--bg-secondary); }
+
+    /* ── Migration Timeline ── */
+    .mig-timeline { display:flex; align-items:center; justify-content:center; gap:0; margin:var(--space-xl) 0; flex-wrap:wrap; }
+    .mig-step {
+      padding:10px 16px; background:var(--bg-card); border:2px solid var(--border);
+      text-align:center; position:relative; min-width:140px;
+      opacity:0; animation:scaleIn .4s var(--ease-spring) forwards;
+    }
+    .mig-step:first-child { border-radius:10px 0 0 10px; }
+    .mig-step:last-child { border-radius:0 10px 10px 0; }
+    .mig-step.done { border-color:var(--green); background:rgba(16,185,129,.04); }
+    .mig-num { font-weight:800; font-size:.85rem; }
+    .mig-name { font-size:.72rem; color:var(--text-secondary); margin-top:2px; }
+
+    /* ── pgvector callout ── */
+    .vector-callout {
+      background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(59,130,246,.08));
+      border:1px solid var(--purple); border-radius:14px; padding:20px;
+      margin:var(--space-xl) 0; display:flex; gap:16px; align-items:center;
+    }
+    .vector-callout .vc-icon { font-size:2.5rem; flex-shrink:0; }
+    .vector-callout h3 { margin-bottom:4px; }
+    .vector-callout p { font-size:.85rem; color:var(--text-secondary); }
+
+    .sd1{animation-delay:.1s}.sd2{animation-delay:.2s}.sd3{animation-delay:.3s}.sd4{animation-delay:.4s}
+    .sd5{animation-delay:.5s}.sd6{animation-delay:.6s}.sd7{animation-delay:.7s}.sd8{animation-delay:.8s}
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <nav class="nav">
+      <a href="index.html" class="nav-brand">🏥 Health Tracker</a>
+      <div class="nav-links"><a href="09-ai-deep-dive.html">← AI</a><a href="index.html">All Guides →</a></div>
+    </nav>
+
+    <section class="hero">
+      <div class="badge fade-in">10 / 10 — Database</div>
+      <h1 class="fade-in delay-1">🗄️ Database <span class="gradient-text">Schema</span></h1>
+      <p class="fade-in delay-2">8 tables created by 5 Alembic migrations. PostgreSQL 16 + pgvector extension for 768-dimension embedding vectors. Click any table to see sample data.</p>
+    </section>
+
+    <div class="stats-bar fade-in delay-3">
+      <div class="stat"><span class="stat-value">8</span><span class="stat-label">Tables</span></div>
+      <div class="stat"><span class="stat-value">5</span><span class="stat-label">Migrations</span></div>
+      <div class="stat"><span class="stat-value">768</span><span class="stat-label">Vector Dimensions</span></div>
+      <div class="stat"><span class="stat-value">12</span><span class="stat-label">Foreign Keys</span></div>
+    </div>
+
+    <!-- ══════════ MIGRATION ORDER ══════════ -->
+    <section class="section">
+      <h2 class="section-title fade-in delay-3">Migration Order</h2>
+      <div class="mig-timeline">
+        <div class="mig-step done sd1"><div class="mig-num">001</div><div class="mig-name">users</div></div>
+        <div class="mig-step done sd2"><div class="mig-num">002</div><div class="mig-name">habits</div></div>
+        <div class="mig-step done sd3"><div class="mig-num">003</div><div class="mig-name">habit_logs</div></div>
+        <div class="mig-step done sd4"><div class="mig-num">004</div><div class="mig-name">AI tables (4)</div></div>
+        <div class="mig-step done sd5"><div class="mig-num">005</div><div class="mig-name">notification_settings</div></div>
+      </div>
+    </section>
+
+    <!-- ══════════ RELATIONSHIPS ══════════ -->
+    <section class="section">
+      <h2 class="section-title">Relationships</h2>
+      <div class="rel-diagram">
+        <div class="rel-row">
+          <div class="rel-box sd1" style="border-color:var(--brand-500);">👤 users</div>
+          <span class="rel-arrow">→ 1:N →</span>
+          <div class="rel-box sd2" style="border-color:var(--green);">📋 habits</div>
+          <span class="rel-arrow">→ 1:N →</span>
+          <div class="rel-box sd3" style="border-color:var(--orange);">📝 habit_logs</div>
+        </div>
+        <div class="rel-row">
+          <div class="rel-box sd2" style="border-color:var(--brand-500);">👤 users</div>
+          <span class="rel-arrow">→ 1:N →</span>
+          <div class="rel-box sd3" style="border-color:var(--purple);">📄 documents</div>
+          <span class="rel-arrow">→ 1:N →</span>
+          <div class="rel-box sd4" style="border-color:var(--pink);">🧩 document_chunks</div>
+          <span style="font-size:.75rem;color:var(--text-muted);margin-left:8px;">← vector(768)</span>
+        </div>
+        <div class="rel-row">
+          <div class="rel-box sd3" style="border-color:var(--brand-500);">👤 users</div>
+          <span class="rel-arrow">→ 1:N →</span>
+          <div class="rel-box sd4" style="border-color:var(--cyan);">💬 ai_chat_messages</div>
+        </div>
+        <div class="rel-row">
+          <div class="rel-box sd4" style="border-color:var(--brand-500);">👤 users</div>
+          <span class="rel-arrow">→ 1:N →</span>
+          <div class="rel-box sd5" style="border-color:var(--orange);">💡 ai_insights</div>
+        </div>
+        <div class="rel-row">
+          <div class="rel-box sd5" style="border-color:var(--brand-500);">👤 users</div>
+          <span class="rel-arrow">→ 1:1 →</span>
+          <div class="rel-box sd6" style="border-color:var(--red);">🔔 notification_settings</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ pgvector CALLOUT ══════════ -->
+    <div class="vector-callout fade-in delay-4">
+      <div class="vc-icon">🧬</div>
+      <div>
+        <h3>pgvector — Vector Similarity Search in PostgreSQL</h3>
+        <p>The <code>document_chunks</code> table has a <code>vector(768)</code> column storing embedding vectors. Cosine similarity search: <code>ORDER BY embedding &lt;=&gt; query_vector LIMIT 5</code>. IVFFlat index makes it O(√n) instead of O(n). No separate vector database (Pinecone/Weaviate) needed — it all lives in PostgreSQL.</p>
+      </div>
+    </div>
+
+    <!-- ══════════ ALL 8 TABLES ══════════ -->
+    <section class="section">
+      <h2 class="section-title">All 8 Tables</h2>
+      <div class="table-grid">
+
+        <!-- users -->
+        <div class="db-table sd1">
+          <div class="db-table-header" style="border-left:4px solid var(--brand-500);">
+            <span class="tbl-icon">👤</span><span class="tbl-name">users</span><span class="tbl-part">Part 04</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">email</span><span class="col-type">VARCHAR UNIQUE</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">password_hash</span><span class="col-type">VARCHAR</span><span class="col-note">bcrypt</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">full_name</span><span class="col-type">VARCHAR(100)</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">timezone</span><span class="col-type">VARCHAR(50)</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">is_active</span><span class="col-type">BOOLEAN</span><span class="col-note">default true</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">created_at</span><span class="col-type">TIMESTAMPTZ</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">id: a1b2c3d4-...<br>email: shreya@test.com<br>full_name: Shreya<br>timezone: Asia/Kolkata<br>is_active: true<br>created_at: 2026-01-01T00:00:00Z</div>
+        </div>
+
+        <!-- habits -->
+        <div class="db-table sd2">
+          <div class="db-table-header" style="border-left:4px solid var(--green);">
+            <span class="tbl-icon">📋</span><span class="tbl-name">habits</span><span class="tbl-part">Part 05</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">user_id</span><span class="col-type">UUID → users</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">name</span><span class="col-type">VARCHAR(100)</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">habit_type</span><span class="col-type">VARCHAR</span><span class="col-note">numeric|boolean|scale</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">unit</span><span class="col-type">VARCHAR(50)</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">target_value</span><span class="col-type">FLOAT</span><span class="col-note">nullable</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">color / icon</span><span class="col-type">VARCHAR</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">sort_order</span><span class="col-type">INTEGER</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">is_archived</span><span class="col-type">BOOLEAN</span><span class="col-note">soft delete</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">name: Water Intake<br>habit_type: numeric<br>unit: glasses<br>target_value: 8.0<br>color: #3B82F6<br>icon: 💧</div>
+        </div>
+
+        <!-- habit_logs -->
+        <div class="db-table sd3">
+          <div class="db-table-header" style="border-left:4px solid var(--orange);">
+            <span class="tbl-icon">📝</span><span class="tbl-name">habit_logs</span><span class="tbl-part">Part 06</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">user_id</span><span class="col-type">UUID → users</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">habit_id</span><span class="col-type">UUID → habits</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">log_date</span><span class="col-type">DATE</span><span class="col-note">indexed</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">value_numeric</span><span class="col-type">FLOAT</span><span class="col-note">nullable</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">value_boolean</span><span class="col-type">BOOLEAN</span><span class="col-note">nullable</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">value_scale</span><span class="col-type">INTEGER</span><span class="col-note">1-10</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">notes</span><span class="col-type">TEXT</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">log_date: 2026-09-26<br>habit_id: (Water Intake)<br>value_numeric: 8.0<br>notes: Great hydration day</div>
+        </div>
+
+        <!-- documents -->
+        <div class="db-table sd4">
+          <div class="db-table-header" style="border-left:4px solid var(--purple);">
+            <span class="tbl-icon">📄</span><span class="tbl-name">documents</span><span class="tbl-part">Part 09</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">user_id</span><span class="col-type">UUID → users</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">filename</span><span class="col-type">VARCHAR</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">status</span><span class="col-type">VARCHAR</span><span class="col-note">uploaded→processed</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">chunk_count</span><span class="col-type">INTEGER</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">filename: Sleep Guide.pdf<br>status: processed<br>chunk_count: 47</div>
+        </div>
+
+        <!-- document_chunks -->
+        <div class="db-table sd5">
+          <div class="db-table-header" style="border-left:4px solid var(--pink);">
+            <span class="tbl-icon">🧩</span><span class="tbl-name">document_chunks</span><span class="tbl-part">Part 09</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">document_id</span><span class="col-type">UUID → documents</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">chunk_text</span><span class="col-type">TEXT</span><span class="col-note">~500 tokens</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">chunk_index</span><span class="col-type">INTEGER</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name" style="color:var(--purple);font-weight:700;">embedding</span><span class="col-type" style="color:var(--purple);">vector(768)</span><span class="col-note" style="color:var(--purple);">pgvector</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">token_count</span><span class="col-type">INTEGER</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">chunk_text: "Foods that promote better sleep include..."<br>embedding: [0.023, -0.156, 0.891, ...] (768 floats)<br>token_count: 127</div>
+        </div>
+
+        <!-- ai_chat_messages -->
+        <div class="db-table sd6">
+          <div class="db-table-header" style="border-left:4px solid var(--cyan);">
+            <span class="tbl-icon">💬</span><span class="tbl-name">ai_chat_messages</span><span class="tbl-part">Part 12</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">user_id</span><span class="col-type">UUID → users</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">role</span><span class="col-type">VARCHAR</span><span class="col-note">user|assistant</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">content</span><span class="col-type">TEXT</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">tokens_used</span><span class="col-type">INTEGER</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">role: user<br>content: How's my sleep this week?<br>tokens_used: 0</div>
+        </div>
+
+        <!-- ai_insights -->
+        <div class="db-table sd7">
+          <div class="db-table-header" style="border-left:4px solid var(--orange);">
+            <span class="tbl-icon">💡</span><span class="tbl-name">ai_insights</span><span class="tbl-part">Part 11</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">user_id</span><span class="col-type">UUID → users</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">insight_type</span><span class="col-type">VARCHAR</span><span class="col-note">weekly|on_demand|streak</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">title</span><span class="col-type">VARCHAR(200)</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">content</span><span class="col-type">TEXT</span><span class="col-note">markdown</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">tokens_used</span><span class="col-type">INTEGER</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">insight_type: weekly_report<br>title: Weekly Health Report — Sep 20-26<br>content: ## Your Week in Review...<br>tokens_used: 3000</div>
+        </div>
+
+        <!-- notification_settings -->
+        <div class="db-table sd8">
+          <div class="db-table-header" style="border-left:4px solid var(--red);">
+            <span class="tbl-icon">🔔</span><span class="tbl-name">notification_settings</span><span class="tbl-part">Part 13</span>
+          </div>
+          <div class="db-table-body">
+            <div class="col-row"><span class="col-key pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span></div>
+            <div class="col-row"><span class="col-key fk">FK</span><span class="col-name">user_id</span><span class="col-type">UUID → users</span><span class="col-note">UNIQUE</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">daily_reminder</span><span class="col-type">BOOLEAN</span><span class="col-note">default true</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">weekly_report</span><span class="col-type">BOOLEAN</span><span class="col-note">default true</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">streak_alerts</span><span class="col-type">BOOLEAN</span><span class="col-note">default true</span></div>
+            <div class="col-row"><span class="col-key"></span><span class="col-name">reminder_time</span><span class="col-type">VARCHAR(5)</span><span class="col-note">"08:00"</span></div>
+          </div>
+          <div class="sample-toggle" onclick="toggleSample(this)">Show sample data ▾</div>
+          <div class="sample-data">daily_reminder: true<br>weekly_report: true<br>streak_alerts: true<br>reminder_time: 08:00</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Done -->
+    <section class="section" style="text-align:center;">
+      <h2 class="gradient-text" style="font-size:2rem;">🎉 All 10 Visual Guides Complete!</h2>
+      <p style="max-width:500px;margin:var(--space-md) auto;">From architecture to database, every layer of the Health Tracker visualized with animations. Open any HTML file in a browser — zero dependencies.</p>
+      <a href="index.html" style="display:inline-block;margin-top:var(--space-lg);padding:12px 28px;background:var(--brand-600);color:white;border-radius:12px;text-decoration:none;font-weight:700;font-size:.95rem;transition:all .3s;">← Back to All Guides</a>
+    </section>
+
+    <footer class="footer">
+      <p><a href="09-ai-deep-dive.html" style="color:var(--brand-500);text-decoration:none;">← AI Deep Dive</a> · Database Schema · <a href="index.html" style="color:var(--brand-500);text-decoration:none;">All Guides →</a></p>
+      <p style="margin-top:8px;">Built by Shreya — 230+ files, 38 endpoints, 62 tests, 88 teaching docs, 10 visual guides.</p>
+    </footer>
+  </div>
+
+  <script>
+    function toggleSample(el) {
+      const data = el.nextElementSibling;
+      data.classList.toggle('open');
+      el.textContent = data.classList.contains('open') ? 'Hide sample data ▴' : 'Show sample data ▾';
+    }
+  </script>
+</body>
+</html>
